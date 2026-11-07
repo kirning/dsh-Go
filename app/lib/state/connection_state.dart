@@ -197,6 +197,21 @@ final hostLinkProvider = Provider.autoDispose.family<HostLink?, HostRef>((ref, h
       });
       ref.onDispose(() => unawaited(link.close()));
       return link;
+    case HostKind.direct:
+      final key = ref.watch(hostsProvider.select((s) => s.directById(host.id)?.connectionKey));
+      if (key == null) return null;
+      final config = ref.read(hostsProvider).directById(host.id)!;
+      final hosts = ref.read(hostsProvider.notifier);
+      final link = DirectHostLink(
+        config: config,
+        loadToken: () => hosts.loadDirectToken(config.id),
+        kicks: ref.read(networkKicksProvider),
+      );
+      ref.listen(hostsProvider.select((s) => s.directById(host.id)), (_, next) {
+        if (next != null && next.connectionKey == link.config.connectionKey) link.updateConfig(next);
+      });
+      ref.onDispose(() => unawaited(link.close()));
+      return link;
     case HostKind.relay:
       final backend = ref.watch(relayBackendProvider);
       final link = RelayHostLink(
@@ -243,6 +258,7 @@ final hostNameProvider = Provider.autoDispose.family<String?, HostRef>((ref, hos
     HostKind.local => appL10n.commonThisPhone,
     HostKind.ssh => ref.watch(hostsProvider.select((s) => s.sshById(host.id)?.name)),
     HostKind.relay => ref.watch(relayAccountProvider.select((a) => a.value?.hostById(host.id)?.name)) ?? host.name,
+    HostKind.direct => ref.watch(hostsProvider.select((s) => s.directById(host.id)?.name)),
   };
 });
 
@@ -537,6 +553,12 @@ AsyncValue<HostConnection?> _connectionForHost(Ref ref, HostRef host) {
       return ref.watch(localConnectionProvider);
     case HostKind.ssh:
       final known = ref.watch(hostsProvider.select((s) => !s.loaded || s.sshById(host.id) != null));
+      if (!known) return ref.watch(localConnectionProvider);
+      final loaded = ref.watch(hostsProvider.select((s) => s.loaded));
+      if (!loaded) return const AsyncLoading();
+      return ref.watch(remoteConnectionProvider(host));
+    case HostKind.direct:
+      final known = ref.watch(hostsProvider.select((s) => !s.loaded || s.directById(host.id) != null));
       if (!known) return ref.watch(localConnectionProvider);
       final loaded = ref.watch(hostsProvider.select((s) => s.loaded));
       if (!loaded) return const AsyncLoading();
