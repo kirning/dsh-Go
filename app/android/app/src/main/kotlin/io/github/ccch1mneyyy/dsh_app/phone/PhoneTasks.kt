@@ -37,7 +37,9 @@ class PhoneTasks(
     }
 
     sealed interface Begin {
-        class Go(val taskId: Long, val newTask: Boolean) : Begin
+        class Go(internal val owner: Owner, val newTask: Boolean) : Begin {
+            val taskId: Long get() = owner.taskId
+        }
         class Refused(val message: String) : Begin
     }
 
@@ -86,15 +88,15 @@ class PhoneTasks(
                 started = true
             }
             lastCallAt = now
-            result = Begin.Go(taskId, started)
+            result = Begin.Go(Owner(taskId, lifecycle, true), started)
         }
         if (started) fire()
         return result
     }
 
     /** Marks activity at the end of a call too (a long handoff must not count as idle). */
-    fun touch() = synchronized(lock) {
-        if (active) lastCallAt = clock()
+    fun touch(owner: Owner?) = synchronized(lock) {
+        if (owner != null && currentLocked(owner)) lastCallAt = clock()
     }
 
     /** Ends an idle task; returns whether one ended. Run periodically so listeners hear it in time. */
@@ -133,10 +135,10 @@ class PhoneTasks(
         inFlight++
     }
 
-    fun callEnded() = synchronized(lock) {
+    fun callEnded(owner: Owner?) = synchronized(lock) {
+        // Check before decrementing: this call may be what keeps a long-running task non-idle.
+        if (owner != null && currentLocked(owner)) lastCallAt = clock()
         if (inFlight > 0) inFlight--
-        // The idle clock starts when the last result went back, however long the call took.
-        if (active) lastCallAt = clock()
     }
 
     /** Tool calls between [callStarted] and [callEnded] right now. */
@@ -183,6 +185,36 @@ class PhoneTasks(
     }
 
     fun isCurrent(owner: Owner): Boolean = synchronized(lock) { currentLocked(owner) }
+
+    /** Result bookkeeping must not adopt the task that replaced its call. Keep [action] short. */
+    fun runIfCurrent(owner: Owner, action: () -> Unit): Boolean = synchronized(lock) {
+        if (!currentLocked(owner)) return false
+        action()
+        true
+    }
+
+    /** A single system start and its optional fallback notice, bound to the original call owner.
+     * Task cancellation and each commitment share [lock]; platform work runs AFTER this lock.
+     * Committed work may finish after stop returns. Thread interruption is only sampled here.
+     */
+    inner class SystemDispatch internal constructor(private val owner: Owner) {
+        private var startCommitted = false
+        private var noticeCommitted = false
+
+        fun commitStart(): Boolean = synchronized(lock) {
+            if (startCommitted || !owner.active || !currentLocked(owner) || Thread.currentThread().isInterrupted) return false
+            startCommitted = true
+            true
+        }
+
+        fun commitNotice(): Boolean = synchronized(lock) {
+            if (!startCommitted || noticeCommitted || !currentLocked(owner) || Thread.currentThread().isInterrupted) return false
+            noticeCommitted = true
+            true
+        }
+    }
+
+    fun systemDispatch(owner: Owner): SystemDispatch = SystemDispatch(owner)
 
     private fun currentLocked(owner: Owner): Boolean =
         owner.taskId == taskId && owner.lifecycle == lifecycle && owner.active == active &&
@@ -306,6 +338,17 @@ class PhoneTasks(
             app = label
         }
         fire()
+    }
+
+    /** A completed system start must not rename a replacement task. Notify outside [lock]. */
+    fun setAppIfCurrent(owner: Owner, label: String?): Boolean {
+        var changed = false
+        synchronized(lock) {
+            if (!owner.active || !currentLocked(owner)) return false
+            if (label != null && app != label) { app = label; changed = true }
+        }
+        if (changed) fire()
+        return true
     }
 
     fun interject(text: String) {

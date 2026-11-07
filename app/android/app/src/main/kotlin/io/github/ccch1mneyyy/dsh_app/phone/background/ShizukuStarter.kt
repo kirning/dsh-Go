@@ -47,7 +47,7 @@ class ShizukuStarter(
 
     private val args0: Shizuku.UserServiceArgs
         get() = Shizuku.UserServiceArgs(ComponentName(context, PrivilegedDisplayService::class.java))
-            .tag("dsh.vdisplay").processNameSuffix("vdisplay").version(1).daemon(false)
+            .tag("dsh.vdisplay").processNameSuffix("vdisplay").version(2).daemon(false)
 
     private fun appInstalled(): Boolean =
         runCatching { context.packageManager.getApplicationInfo(PACKAGE, 0); true }.getOrDefault(false)

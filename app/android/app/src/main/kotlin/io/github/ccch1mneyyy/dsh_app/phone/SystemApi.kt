@@ -23,10 +23,10 @@ class UrlTarget(val error: String? = null, val packageName: String? = null, val 
 interface SystemApi {
     fun apps(): List<AppEntry>
     fun isInstalled(pkg: String): Boolean
-    fun launch(app: AppEntry): SysResult
+    fun launch(app: AppEntry, dispatch: PhoneTasks.SystemDispatch): SysResult
     fun urlTarget(url: String): UrlTarget
-    fun openUrl(url: String, target: UrlTarget): SysResult
-    fun intent(spec: IntentSpec, shareTo: AppEntry?): SysResult
+    fun openUrl(url: String, target: UrlTarget, dispatch: PhoneTasks.SystemDispatch): SysResult
+    fun intent(spec: IntentSpec, shareTo: AppEntry?, dispatch: PhoneTasks.SystemDispatch): SysResult
     fun notify(title: String, text: String): SysResult
     fun clipboardSet(text: String): SysResult
     fun clipboardGet(): SysResult

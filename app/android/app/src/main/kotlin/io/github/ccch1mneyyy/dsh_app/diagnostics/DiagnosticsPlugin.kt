@@ -160,11 +160,16 @@ class DiagnosticsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                 val length = raf.length()
                 val start = (length - maxBytes).coerceAtLeast(0)
                 val bytes = ByteArray((length - start).toInt())
+                var cutFirstLine = false
+                if (start > 0) {
+                    raf.seek(start - 1)
+                    cutFirstLine = raf.read() != '\n'.code
+                }
                 raf.seek(start)
                 raf.readFully(bytes)
                 val lines = String(bytes, Charsets.UTF_8).split('\n')
-                // A cut first line is half a line: drop it.
-                val whole = if (start > 0) lines.drop(1) else lines
+                // Drop only a clipped first line; an exact line boundary is complete.
+                val whole = if (cutFirstLine) lines.drop(1) else lines
                 whole.dropLastWhile { it.isEmpty() }
             }
         }

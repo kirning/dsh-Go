@@ -1,5 +1,13 @@
 {
   "patches": {
+    "cordis-effect-dispose-completion.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/cordis/lib/index.js": {
+          "after": "b8b87360ebc67df2d0aabea214b8ed30d4bde3767e354ebb1b85fc6c15b45a05",
+          "before": "627409afa06a265f7253200d3bc4648e88805c39fd3768568eb9b9518a31fe8f"
+        }
+      }
+    },
     "credentials-decimal-refs.diff": {
       "0.2.1-rc.4": {
         "node_modules/@deepseek-ai/dsh-credentials-local/lib/index.js": {
@@ -81,6 +89,14 @@
         "node_modules/@deepseek-ai/dsh-plugin-manager/lib/index.js": {
           "after": "edb931cb1b6d197efac694c3e41c8220c7b1d4d6f545c8ad74dc798c54d31095",
           "before": "272efa48be4bce0a75ce7fe06eabf1c7fb60ca0e68b0708945199e80a9893bea"
+        }
+      }
+    },
+    "preset-legacy-delegation.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-agent-preset/lib/index.js": {
+          "after": "5c8452bdb9954acd98737297512a3d8cb8d4ea534ee6e6ea5c2050aba8cf08e9",
+          "before": "23cd2dd62ac3b27522a2d377e14b5a93f80c2189e733937dcdd02b73a6d3d1da"
         }
       }
     },
@@ -443,7 +459,7 @@
       },
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js": {
-          "after": "57e84969b6f73a01acd7702b188323e012e7c6328a29d65133ace4c6bc5da608",
+          "after": "1dde69bfc2270468bda6897a29277f3b3fb3b46c4b1844268f6fd35f563ab514",
           "before": "a6fa8e0c7c90191caf5f4a3bb5c624a86e9845cf3c79d020b71420d0e20ae4c1"
         },
         "node_modules/@deepseek-ai/dsh-schedule/lib/index.js": {
@@ -579,8 +595,8 @@
       },
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js": {
-          "after": "d6ebbb703d0a9236e15f4a9c65d079f70ce67d24c81756f83a3ba1cd8353815b",
-          "before": "57e84969b6f73a01acd7702b188323e012e7c6328a29d65133ace4c6bc5da608"
+          "after": "927efc78e67b6203502892f1ebef4d198c9b95dfc8f8432692ba28f41eb511bf",
+          "before": "1dde69bfc2270468bda6897a29277f3b3fb3b46c4b1844268f6fd35f563ab514"
         },
         "node_modules/@deepseek-ai/dsh-api-session-controller/lib/index.js": {
           "after": "cd7fd35ee3f4cc3c0d8d6121361bf81fc12549ed04be12818ca00ba70ac70353",
@@ -1168,6 +1184,14 @@
         }
       }
     },
+    "zzzzzzzzzzz-plugin-operations-log-utf8.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-plugin-manager/lib/types/operations.js": {
+          "after": "c7d72b35b81443a16f6a57f91087ba2f88812d0e5db7b9cdf131d852adcff9c8",
+          "before": "5886367b89cde0db08f4f9645afeb6c8a21ecb0be8a3f92d2459b433c9019661"
+        }
+      }
+    },
     "zzzzzzzzzzz-plugin-update-precondition.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-plugin-manager/lib/index.js": {
@@ -1176,11 +1200,27 @@
         }
       }
     },
+    "zzzzzzzzzzzz-plan-pending-restore.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-plan-mode/lib/index.js": {
+          "after": "e6326e2ac1756bdc947a3690f1e212a6b6b680c3c76ec40468a3d7b63af0608a",
+          "before": "5f9ee37cd7bc3922c05148504700ac25eb2179099d494c5721380cd71363ced0"
+        }
+      }
+    },
     "zzzzzzzzzzzz-plugin-update-hmr-selection.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-plugin-manager/lib/index.js": {
           "after": "4f615be658bc12600986f794b0b399b2c25df0b36dd89bda5dd0666cbf3df726",
           "before": "98b57a9220fe7620113949927a792006175546b63c5a0917305ac2e821cf984d"
+        }
+      }
+    },
+    "zzzzzzzzzzzzz-plan-failed-command-pending.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-plan-mode/lib/index.js": {
+          "after": "c60a770d64661cdc7131a9e27f960f6596ca41c8c51c2dfc5887276b9be44cdd",
+          "before": "e6326e2ac1756bdc947a3690f1e212a6b6b680c3c76ec40468a3d7b63af0608a"
         }
       }
     },
@@ -1448,11 +1488,27 @@
         }
       }
     },
+    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-storage-json-postpublish.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-storage-json/lib/index.js": {
+          "after": "30b255f943d5e24670cda9817c149700e88c490f17e7c244bfb6c0ce9685103f",
+          "before": "62827d69b251c0ee88c35293257dc2480a276227c7da01d6a21ab986936c9b05"
+        }
+      }
+    },
     "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-credentials-record-own-key.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-credentials-local/lib/index.js": {
           "after": "75668bd81bab207ad782fc6681f14b108268b8ceb512aff23d30721cfeb3c2d8",
           "before": "46c193e78c39303bfe394e022c3f29d4734887f926682cd5efe9bdc8027cf77e"
+        }
+      }
+    },
+    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-piai-credential-wait-cancel.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js": {
+          "after": "0a99a2fc903a4285044b09114b3bd20ee1e612f39aa381e4a71b10d48ee9e9f7",
+          "before": "070c839e2c00e2d5f7c5d82307ca3d84dbb2323e46979daf265908751bbe8ae8"
         }
       }
     }

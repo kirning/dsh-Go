@@ -23,6 +23,15 @@ import '../transport/webrtc_transport.dart';
 import '../util/bytes.dart';
 import 'secret_store.dart';
 
+// Accounts using the same storage object and server keys share commit order.
+// An Expando does not keep an otherwise unreachable SecretStore alive.
+class _AccountStorageState {
+  Future<void> credentialWrites = Future<void>.value();
+  int signInEpoch = 0;
+}
+
+final _accountStorageStates = Expando<Map<String, _AccountStorageState>>();
+
 /// The signed-in account on one Server.
 class RemoteUser {
   const RemoteUser({required this.account, required this.deviceId, required this.serverUrl, this.provider});
@@ -272,6 +281,8 @@ class RemoteAccount {
        _socketConnector = socketConnector {
     api = RemoteServerApi(this.serverUrl, httpClient: httpClient);
     _scope = hashes.sha256.convert(utf8.encode(this.serverUrl.origin)).toString().substring(0, 24);
+    final scopes = _accountStorageStates[secrets] ??= {};
+    _storageState = scopes.putIfAbsent(_scope, _AccountStorageState.new);
   }
 
   final Uri serverUrl;
@@ -320,10 +331,8 @@ class RemoteAccount {
   _Identity? _identity;
   Future<_Identity>? _creatingIdentity;
   _Credentials? _credentials;
-  Future<void> _credentialWrites = Future<void>.value();
-  // Refreshes keep the same sign-in. Only a successfully committed login
-  // retires an earlier logout's authority over local account secrets.
-  int _signInEpoch = 0;
+  // Shared only within this storage object and normalized server scope.
+  late final _AccountStorageState _storageState;
   bool _restored = false;
   Future<void>? _restoring;
   Map<String, _Pin>? _pins;
@@ -553,13 +562,13 @@ class RemoteAccount {
   Future<void> _saveCredentials(_Credentials credentials, {void Function()? beforeWrite, bool signIn = false}) {
     // SecretStore writes are atomic, but not cancellable. Serialize commits
     // so a slow older write cannot finish after a newer login's write.
-    final write = _credentialWrites.then((_) async {
+    final write = _storageState.credentialWrites.then((_) async {
       beforeWrite?.call();
       await _secrets.write(_credentialsKey, jsonEncode(credentials.toJson()));
       _credentials = credentials;
-      if (signIn) _signInEpoch++;
+      if (signIn) _storageState.signInEpoch++;
     });
-    _credentialWrites = write.catchError((Object _) {});
+    _storageState.credentialWrites = write.catchError((Object _) {});
     return write;
   }
 
@@ -569,8 +578,8 @@ class RemoteAccount {
   /// A newer committed sign-in retires further cleanup from this logout;
   /// a revoke or storage delete already issued cannot be undone here.
   Future<void> logout({bool revokeDevice = true}) async {
-    final epoch = _signInEpoch;
-    bool isCurrent() => epoch == _signInEpoch;
+    final epoch = _storageState.signInEpoch;
+    bool isCurrent() => epoch == _storageState.signInEpoch;
     await _restore();
     if (!isCurrent()) return;
     await _active?.close();
@@ -658,13 +667,13 @@ class RemoteAccount {
   Future<void> _dropCredentials({_Credentials? owner, bool Function()? isCurrent}) {
     // Deletes share the commit queue; retired refreshes and logouts recheck
     // their owner at the point where the mutation would actually begin.
-    final write = _credentialWrites.then((_) async {
+    final write = _storageState.credentialWrites.then((_) async {
       if (isCurrent != null && !isCurrent()) return;
       if (owner != null && !identical(_credentials, owner)) return;
       _credentials = null;
       await _secrets.delete(_credentialsKey);
     });
-    _credentialWrites = write.catchError((Object _) {});
+    _storageState.credentialWrites = write.catchError((Object _) {});
     return write;
   }
 

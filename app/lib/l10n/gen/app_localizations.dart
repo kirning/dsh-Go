@@ -16628,6 +16628,186 @@ abstract class L10n {
   /// **'关闭后不再用这个服务生成'**
   String get mediaSettingsEnabledHint;
 
+  /// No description provided for @mediaConfigKeySaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存 · 未验证'**
+  String get mediaConfigKeySaved;
+
+  /// No description provided for @mediaConfigKeyUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'状态未知'**
+  String get mediaConfigKeyUnknown;
+
+  /// No description provided for @mediaConfigKeyNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'密钥是否存在以主机返回为准。保存不代表已验证身份或模型权限。'**
+  String get mediaConfigKeyNote;
+
+  /// No description provided for @mediaConfigConsumers.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用此密钥的媒体服务：{services}。修改或移除会影响这些服务；主机上的其他集成也可能使用它。'**
+  String mediaConfigConsumers(String services);
+
+  /// No description provided for @mediaConfigCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查已保存配置'**
+  String get mediaConfigCheck;
+
+  /// No description provided for @mediaConfigCheckNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅检查本地配置快照，不请求供应商，不产生生成费用。不验证密钥、连通性、余额、模型权限或地区；配置是否接受仍以主机为准。'**
+  String get mediaConfigCheckNote;
+
+  /// No description provided for @mediaConfigCheckReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'未发现本地配置问题'**
+  String get mediaConfigCheckReady;
+
+  /// No description provided for @mediaConfigCheckMissingKey.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机尚未报告已保存的密钥。'**
+  String get mediaConfigCheckMissingKey;
+
+  /// No description provided for @mediaConfigCheckModels.
+  ///
+  /// In zh, this message translates to:
+  /// **'未选择模型，或部分已选模型不在目录中、协议不匹配。'**
+  String get mediaConfigCheckModels;
+
+  /// No description provided for @mediaConfigCheckDisabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'此服务已关闭。'**
+  String get mediaConfigCheckDisabled;
+
+  /// No description provided for @mediaConfigUrlInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入含主机名的 HTTPS API 根地址，不得包含凭据、查询参数、片段或空白。'**
+  String get mediaConfigUrlInvalid;
+
+  /// No description provided for @mediaConfigUrlEndpoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'这看起来是请求端点。请填写 API 根地址，主机会自动追加请求路径。'**
+  String get mediaConfigUrlEndpoint;
+
+  /// No description provided for @mediaConfigUrlRoot.
+  ///
+  /// In zh, this message translates to:
+  /// **'此协议只需来源地址（https://主机名），不要填写 API 路径。'**
+  String get mediaConfigUrlRoot;
+
+  /// No description provided for @mediaConfigUrlHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'填写 API 根地址，而非生成端点。OpenAI 兼容服务保留其路径前缀（如 /v1）。'**
+  String get mediaConfigUrlHint;
+
+  /// No description provided for @mediaConfigPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建请求预览'**
+  String get mediaConfigPreview;
+
+  /// No description provided for @mediaConfigPreviewNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅预览生成/创建请求；编辑和查询状态可能使用不同路径。预览不代表连通或已获主机接受。'**
+  String get mediaConfigPreviewNote;
+
+  /// No description provided for @mediaConfigPreviewUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'此主机目录未提供请求路径。'**
+  String get mediaConfigPreviewUnavailable;
+
+  /// No description provided for @mediaConfigTargetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'将密钥用于不同目标？'**
+  String get mediaConfigTargetTitle;
+
+  /// No description provided for @mediaConfigTargetBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标将从 {before} 更改为 {after}。后续请求可能向新目标发送所引用的密钥，仅在信任该目标时继续。主机仍会校验此更改。'**
+  String mediaConfigTargetBody(String before, String after);
+
+  /// No description provided for @mediaConfigTargetConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'信任目标并继续'**
+  String get mediaConfigTargetConfirm;
+
+  /// No description provided for @mediaVideoLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在加载视频…'**
+  String get mediaVideoLoading;
+
+  /// No description provided for @mediaVideoCannotPlay.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法在 App 内播放此视频，请重试或使用其他应用打开。'**
+  String get mediaVideoCannotPlay;
+
+  /// No description provided for @mediaVideoPlay.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放'**
+  String get mediaVideoPlay;
+
+  /// No description provided for @mediaVideoPause.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停'**
+  String get mediaVideoPause;
+
+  /// No description provided for @mediaVideoSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'视频保存失败，请重试。'**
+  String get mediaVideoSaveFailed;
+
+  /// No description provided for @mediaImageLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在加载图片'**
+  String get mediaImageLoading;
+
+  /// No description provided for @mediaImageReload.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新加载'**
+  String get mediaImageReload;
+
+  /// No description provided for @mediaImageReloadHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'只重新读取文件，不会重新生成或收费'**
+  String get mediaImageReloadHint;
+
+  /// No description provided for @mediaVideoNoPoster.
+  ///
+  /// In zh, this message translates to:
+  /// **'轻点播放视频'**
+  String get mediaVideoNoPoster;
+
+  /// No description provided for @mediaSavedFilesCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存 {count} 个文件到相册'**
+  String mediaSavedFilesCount(int count);
+
   /// No description provided for @nearbyThisChat.
   ///
   /// In zh, this message translates to:
@@ -32447,7 +32627,7 @@ abstract class L10n {
   /// No description provided for @viewSuggestWorkspace.
   ///
   /// In zh, this message translates to:
-  /// **'看看工作区有什么'**
+  /// **'看看工作区'**
   String get viewSuggestWorkspace;
 
   /// No description provided for @viewSuggestWorkspacePrompt.
@@ -32459,7 +32639,7 @@ abstract class L10n {
   /// No description provided for @viewSuggestWordCount.
   ///
   /// In zh, this message translates to:
-  /// **'写个词频统计脚本'**
+  /// **'写个小脚本'**
   String get viewSuggestWordCount;
 
   /// No description provided for @viewSuggestWordCountPrompt.
@@ -32471,7 +32651,7 @@ abstract class L10n {
   /// No description provided for @viewSuggestNode.
   ///
   /// In zh, this message translates to:
-  /// **'新建 Node.js 项目'**
+  /// **'新建项目'**
   String get viewSuggestNode;
 
   /// No description provided for @viewSuggestNodePrompt.
@@ -32483,7 +32663,7 @@ abstract class L10n {
   /// No description provided for @viewSuggestGit.
   ///
   /// In zh, this message translates to:
-  /// **'rebase 还是 merge'**
+  /// **'讲讲 Git'**
   String get viewSuggestGit;
 
   /// No description provided for @viewSuggestGitPrompt.
@@ -32491,6 +32671,270 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'用一个具体例子解释 git rebase 和 git merge 的区别，各自什么时候用。'**
   String get viewSuggestGitPrompt;
+
+  /// No description provided for @viewSuggestWorkspaceHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'列出文件和项目'**
+  String get viewSuggestWorkspaceHint;
+
+  /// No description provided for @viewSuggestWordCountHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'统计词频并跑一次'**
+  String get viewSuggestWordCountHint;
+
+  /// No description provided for @viewSuggestNodeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Node.js 带测试'**
+  String get viewSuggestNodeHint;
+
+  /// No description provided for @viewSuggestGitHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'rebase 和 merge'**
+  String get viewSuggestGitHint;
+
+  /// No description provided for @viewTipNext.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一条小技巧'**
+  String get viewTipNext;
+
+  /// No description provided for @viewTipLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'小技巧：{value}'**
+  String viewTipLabel(String value);
+
+  /// No description provided for @viewTipSteer.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成中长按发送键，可以插话、排队或打断'**
+  String get viewTipSteer;
+
+  /// No description provided for @viewTipMidRun.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 干活时也能发消息，它下一步就会看到'**
+  String get viewTipMidRun;
+
+  /// No description provided for @viewTipSlash.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入 / 唤出指令：压缩上下文、切换模型等'**
+  String get viewTipSlash;
+
+  /// No description provided for @viewTipMention.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入 @ 可以引用工作区里的文件或别的对话'**
+  String get viewTipMention;
+
+  /// No description provided for @viewTipReplyMenu.
+  ///
+  /// In zh, this message translates to:
+  /// **'长按 AI 的回复，可以复制、引用或重新生成'**
+  String get viewTipReplyMenu;
+
+  /// No description provided for @viewTipEditResend.
+  ///
+  /// In zh, this message translates to:
+  /// **'长按自己的消息，可以改写后重发，原对话不动'**
+  String get viewTipEditResend;
+
+  /// No description provided for @viewTipQuote.
+  ///
+  /// In zh, this message translates to:
+  /// **'选中回复里的一段，点「引用」就只追问那一段'**
+  String get viewTipQuote;
+
+  /// No description provided for @viewTipTitleDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'点顶部的对话标题，能看改动、文件和终端'**
+  String get viewTipTitleDetails;
+
+  /// No description provided for @viewTipContextRing.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送键旁的小圆环是上下文用量，点开看详情'**
+  String get viewTipContextRing;
+
+  /// No description provided for @viewTipDrawerMenu.
+  ///
+  /// In zh, this message translates to:
+  /// **'长按侧栏里的对话，可以置顶、改名或归档'**
+  String get viewTipDrawerMenu;
+
+  /// No description provided for @viewTipSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机支持时，搜索对话还能搜到聊天内容，不只是标题'**
+  String get viewTipSearch;
+
+  /// No description provided for @viewTipSettingsSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'长按侧栏的设置键，可以直接搜索设置项'**
+  String get viewTipSettingsSearch;
+
+  /// No description provided for @viewTipQuickPanel.
+  ///
+  /// In zh, this message translates to:
+  /// **'在对话页向左滑，打开快捷入口'**
+  String get viewTipQuickPanel;
+
+  /// No description provided for @viewTipFolderNewChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'长按侧栏的文件夹，可以直接在里面开新对话'**
+  String get viewTipFolderNewChat;
+
+  /// No description provided for @viewTipSwitchHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'点侧栏底部的主机名，可以切到电脑上的 DSH'**
+  String get viewTipSwitchHost;
+
+  /// No description provided for @viewTipPasteImage.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入法里的截图和贴图，可以直接贴进输入框'**
+  String get viewTipPasteImage;
+
+  /// No description provided for @viewTipLauncher.
+  ///
+  /// In zh, this message translates to:
+  /// **'长按桌面图标，可以直接语音提问或开新对话'**
+  String get viewTipLauncher;
+
+  /// No description provided for @viewTipPetBubble.
+  ///
+  /// In zh, this message translates to:
+  /// **'宠物冒泡时点一下，就跳到等你的那个对话'**
+  String get viewTipPetBubble;
+
+  /// No description provided for @viewTipPetPlay.
+  ///
+  /// In zh, this message translates to:
+  /// **'连点宠物三下会挠痒痒，长按可以换宠物'**
+  String get viewTipPetPlay;
+
+  /// No description provided for @viewTipActivityStrip.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成时点一下状态条，看这一轮的完整轨迹'**
+  String get viewTipActivityStrip;
+
+  /// No description provided for @viewTipImageZoom.
+  ///
+  /// In zh, this message translates to:
+  /// **'看图时双击放大、双指缩放，长按可以保存'**
+  String get viewTipImageZoom;
+
+  /// No description provided for @viewTipQueuedRecall.
+  ///
+  /// In zh, this message translates to:
+  /// **'排队中的消息可以撤回到输入框再改'**
+  String get viewTipQueuedRecall;
+
+  /// No description provided for @viewTipKeyboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'接了键盘：Ctrl+Enter 发送，连按两次 Esc 停止'**
+  String get viewTipKeyboard;
+
+  /// No description provided for @viewTipShareIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'在别的 App 里分享文字或图片给 DSH Go，会填进新对话'**
+  String get viewTipShareIn;
+
+  /// No description provided for @viewTipShareSelect.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享对话时长按再滑动，可以一次选中多条消息'**
+  String get viewTipShareSelect;
+
+  /// No description provided for @viewTipChartDrag.
+  ///
+  /// In zh, this message translates to:
+  /// **'回复里的图表可以左右拖动，看每个点的数值'**
+  String get viewTipChartDrag;
+
+  /// No description provided for @viewTipCopyPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'改动卡里长按某个文件，可以复制它的路径'**
+  String get viewTipCopyPath;
+
+  /// No description provided for @viewTipCompanion.
+  ///
+  /// In zh, this message translates to:
+  /// **'「伙伴小屋」藏在切换主机的面板里'**
+  String get viewTipCompanion;
+
+  /// No description provided for @viewTipAnswerInline.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 向你提问时，直接在输入框里打字就是回答'**
+  String get viewTipAnswerInline;
+
+  /// No description provided for @viewTipWallpaper.
+  ///
+  /// In zh, this message translates to:
+  /// **'壁纸可以拖动、缩放，还能调模糊和明暗'**
+  String get viewTipWallpaper;
+
+  /// No description provided for @viewTipModelHere.
+  ///
+  /// In zh, this message translates to:
+  /// **'这里就能换模型、预设和权限，只对这次对话生效'**
+  String get viewTipModelHere;
+
+  /// No description provided for @viewNewChatFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件夹'**
+  String get viewNewChatFolder;
+
+  /// No description provided for @viewNewChatPresetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次对话的预设'**
+  String get viewNewChatPresetTitle;
+
+  /// No description provided for @viewNewChatPermissionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次对话的权限'**
+  String get viewNewChatPermissionTitle;
+
+  /// No description provided for @viewNewChatDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认'**
+  String get viewNewChatDefault;
+
+  /// No description provided for @viewNewChatUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'不可用'**
+  String get viewNewChatUnavailable;
+
+  /// No description provided for @viewNewChatChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'更改'**
+  String get viewNewChatChange;
+
+  /// No description provided for @viewNewChatModesFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'没能设置预设或权限，消息还没发出'**
+  String get viewNewChatModesFailed;
 
   /// No description provided for @viewGreetingMorning.
   ///

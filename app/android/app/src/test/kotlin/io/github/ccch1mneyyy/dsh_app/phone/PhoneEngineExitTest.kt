@@ -38,10 +38,10 @@ class PhoneEngineExitTest {
         override fun system() = object : SystemApi {
             override fun apps() = listOf(AppEntry("Example", "example.app"))
             override fun isInstalled(pkg: String) = true
-            override fun launch(app: AppEntry) = error("unexpected launch")
+            override fun launch(app: AppEntry, dispatch: PhoneTasks.SystemDispatch) = error("unexpected launch")
             override fun urlTarget(url: String) = error("unexpected URL")
-            override fun openUrl(url: String, target: UrlTarget) = error("unexpected URL open")
-            override fun intent(spec: IntentSpec, shareTo: AppEntry?) = error("unexpected intent")
+            override fun openUrl(url: String, target: UrlTarget, dispatch: PhoneTasks.SystemDispatch) = error("unexpected URL open")
+            override fun intent(spec: IntentSpec, shareTo: AppEntry?, dispatch: PhoneTasks.SystemDispatch) = error("unexpected intent")
             override fun notify(title: String, text: String): SysResult {
                 notifications.incrementAndGet()
                 synchronized(workerThreads) { workerThreads += Thread.currentThread().name }

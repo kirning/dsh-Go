@@ -89,6 +89,7 @@ class FakeRemoteServer {
   final List<String> requests = [];
 
   /// One-shot response gates for real HTTP cancellation tests.
+  Future<void> Function()? beforeQrPollResponse;
   Future<void> Function()? beforeAccountLookupResponse;
   Future<void> Function()? beforeRegistrationResponse;
   Future<void> Function()? beforeRefreshRequest;
@@ -228,6 +229,9 @@ class FakeRemoteServer {
       return json(200, {'qrId': qrId, 'scanUrl': '$url/app/qr/$qrId', 'expiresIn': 120, 'provider': 'github'});
     }
     if (request.method == 'GET' && path.startsWith('/api/v1/auth/oauth/qr/')) {
+      final beforePoll = beforeQrPollResponse;
+      beforeQrPollResponse = null;
+      if (beforePoll != null) await beforePoll();
       final session = _qr[Uri.decodeComponent(path.substring('/api/v1/auth/oauth/qr/'.length))];
       if (session == null) return error(404, 'NOT_FOUND');
       final token = session.remove('token');

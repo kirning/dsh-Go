@@ -101,6 +101,8 @@ data class ActionResult(
     val message: String,
     /** The screen after the action settled (new lines marked `+`), when it could be read. */
     val screen: ScreenSnapshot? = null,
+    /** Explicit fingerprint rejection before input. Refresh once; never replay the action. */
+    val staleSnapshot: Boolean = false,
 )
 
 data class CollectResult(

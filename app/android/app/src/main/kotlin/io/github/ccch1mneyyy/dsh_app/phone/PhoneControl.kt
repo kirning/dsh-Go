@@ -47,7 +47,7 @@ class PhoneControl private constructor(private val app: Context) : PhoneEnv, Con
     private val nm = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val ticker = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "dsh-phone-status").apply { isDaemon = true } }
 
-    val tasks = PhoneTasks()
+    val tasks = PhoneTasks(clock = SystemClock::elapsedRealtime)
     val log = ActionLog()
     val system = SystemActions(app)
     private val localizedUi = PhoneUiText { key, args ->
@@ -89,6 +89,8 @@ class PhoneControl private constructor(private val app: Context) : PhoneEnv, Con
             "phone_log_open_url" -> R.string.phone_log_open_url
             "phone_log_open_url_scheme" -> R.string.phone_log_open_url_scheme
             "phone_log_open_app" -> R.string.phone_log_open_app
+            "phone_log_system_returned_success" -> R.string.phone_log_system_returned_success
+            "phone_log_system_returned_failure" -> R.string.phone_log_system_returned_failure
             "phone_log_open_background" -> R.string.phone_log_open_background
             "phone_log_notify" -> R.string.phone_log_notify
             "phone_log_clipboard_read" -> R.string.phone_log_clipboard_read

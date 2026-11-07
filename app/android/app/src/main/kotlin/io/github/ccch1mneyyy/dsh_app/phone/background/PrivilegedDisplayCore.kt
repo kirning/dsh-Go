@@ -36,6 +36,7 @@ import android.view.InputEvent
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
@@ -159,7 +160,7 @@ class PrivilegedDisplayCore(private val context: Context) {
             }
             Proto.OP_SCROLL -> {
                 requireDisplay(); requireForeground(pkg)
-                scroll(request)
+                scroll(pkg, request)
                 sleepChecked(250)
                 observe(pkg, false, response)
             }
@@ -624,8 +625,12 @@ class PrivilegedDisplayCore(private val context: Context) {
         val e = elements.getOrNull(index - 1) ?: throw Fault("elementMissing")
         val expectRole = request.getString(Proto.EXPECT_ROLE)
         val expectLabel = request.getString(Proto.EXPECT_LABEL)
-        if (expectRole != null && expectRole != e.role) throw Fault("staleSnapshot")
-        if (expectLabel != null && expectLabel.isNotEmpty() && !e.label.startsWith(expectLabel.take(12))) throw Fault("staleSnapshot")
+        val expectViewId = request.getString(Proto.EXPECT_VIEW_ID)
+        // The whole label is part of the identity: safety was checked against the observed
+        // target, so "Invoice 12 view" turning into "Invoice 12 delete" must not pass.
+        if (expectRole != null && expectRole != e.role ||
+            expectLabel != null && expectLabel != e.label ||
+            expectViewId != null && expectViewId != e.viewId) throw Fault("staleSnapshot")
         return e
     }
 
@@ -637,18 +642,40 @@ class PrivilegedDisplayCore(private val context: Context) {
         injectTap(cx, cy, long)
     }
 
-    private fun scroll(request: Bundle) {
+    private fun scroll(pkg: String, request: Bundle) {
         val dir = request.getString(Proto.DIR) ?: "down"
-        val cx = width / 2; val cy = height / 2
-        val span = height / 3
+        val bounds = if (request.containsKey(Proto.ELEMENT)) {
+            val target = resolveElement(pkg, request)
+            if (target.flags and Proto.FLAG_SCROLLABLE == 0) throw Fault("inputRejected")
+            Rect(target.bounds).also {
+                if (!it.intersect(0, 0, width, height)) throw Fault("inputRejected")
+            }
+        } else null
+        val cx = bounds?.centerX() ?: (width / 2)
+        val cy = bounds?.centerY() ?: (height / 2)
+        val span = if (bounds == null) (if (dir == "left" || dir == "right") width else height) / 3 else
+            (if (dir == "left" || dir == "right") bounds.width() else bounds.height()) / 3
+        if (bounds != null && span < 1) throw Fault("inputRejected")
         val p = when (dir) {
             "up" -> intArrayOf(cx, cy - span, cx, cy + span)
             "down" -> intArrayOf(cx, cy + span, cx, cy - span)
-            "left" -> intArrayOf(cx + span, cy, cx - span, cy)
-            "right" -> intArrayOf(cx - span, cy, cx + span, cy)
+            "left" -> intArrayOf(cx - span, cy, cx + span, cy)
+            "right" -> intArrayOf(cx + span, cy, cx - span, cy)
             else -> throw Fault("invalidArguments")
         }
-        injectSwipe(p[0], p[1], p[2], p[3], 400)
+        val duration = 400
+        if (bounds != null) {
+            val vd = display ?: throw Fault("displayMissing")
+            val displayContext = context.createDisplayContext(vd.display)
+            val configured = displayContext.createConfigurationContext(displayContext.resources.configuration)
+            val slop = ViewConfiguration.get(configured).scaledTouchSlop
+            val steps = SwipeGeometry.steps(duration)
+            val lastX = SwipeGeometry.coordinate(p[0], p[2], steps - 1, steps)
+            val lastY = SwipeGeometry.coordinate(p[1], p[3], steps - 1, steps)
+            if (maxOf(kotlin.math.abs(lastX - p[0]), kotlin.math.abs(lastY - p[1])) <= slop)
+                throw Fault("inputRejected")
+        }
+        injectSwipe(p[0], p[1], p[2], p[3], duration)
     }
 
     private fun globalKey(key: String?) {
@@ -656,7 +683,7 @@ class PrivilegedDisplayCore(private val context: Context) {
         val now = SystemClock.uptimeMillis()
         injectKey(KeyEvent(now, now, KeyEvent.ACTION_DOWN, code, 0))
         sleepChecked(4)
-        injectKey(KeyEvent(SystemClock.uptimeMillis(), now, KeyEvent.ACTION_UP, code, 0))
+        injectKey(KeyEvent(now, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
     }
 
     private fun typeText(pkg: String, request: Bundle, response: Bundle) {
@@ -721,11 +748,11 @@ class PrivilegedDisplayCore(private val context: Context) {
     private fun injectSwipe(sx: Int, sy: Int, ex: Int, ey: Int, duration: Int) {
         val down = SystemClock.uptimeMillis()
         sendMotion(MotionEvent.ACTION_DOWN, sx, sy, down)
-        val steps = (duration / 16).coerceAtLeast(1)
+        val steps = SwipeGeometry.steps(duration)
         for (step in 1..steps) {
             sleepChecked((duration / steps).toLong())
-            val f = step.toFloat() / steps
-            val mx = (sx + (ex - sx) * f).toInt(); val my = (sy + (ey - sy) * f).toInt()
+            val mx = SwipeGeometry.coordinate(sx, ex, step, steps)
+            val my = SwipeGeometry.coordinate(sy, ey, step, steps)
             if (step < steps) sendMotion(MotionEvent.ACTION_MOVE, mx, my, down)
         }
         sendMotion(MotionEvent.ACTION_UP, ex, ey, down)

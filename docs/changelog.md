@@ -2,6 +2,40 @@
 
 每个版本先中文、后英文。发版时把对应版本的正文（不含版本标题）作为 Release 正文，见 `docs/release.md`。
 
+## 1.0.13 · 2026-11-08
+
+### 中文
+
+- **更新前请注意：这一版的运行时有更新，所以还是下整包。** 内置引擎仍是 DSH 0.2.2-rc.1，变的是我们给它打的补丁。升级后 Linux 环境里只保留 `/root`，用 `apt` 装的软件和放在 `/usr/local`、`/opt` 等目录的文件需要重新装。对话和设置不受影响。
+- **这一版没有在真机上验证过。** App 内的视频播放和存视频到相册只经过自动测试和编译检查，没在手机上放过。遇到问题请开 issue 反馈。
+- 新对话首页：建议换成横排小卡片，下面一行小技巧会自动轮换，点一下换下一条。首页就能选这次对话的模型、Agent 预设和权限，第一条消息发出前生效；设置失败时消息不会发出，留在输入框里。
+- 视频：点视频在 App 内播放，可以播放、暂停和拖动进度，放不了时仍能用其他应用打开；视频也能保存到相册。没有封面的本机视频会取首帧当封面，远程视频只在你主动打开时才下载。
+- 图片：加载失败时可以点「重新加载」，只重新读取文件，不会重新生成，也不会再收生成费用。
+- 图像与视频设置：API 地址填根地址，编辑时可以预览请求地址；换站点或跨站点复用 Key 要先确认。「检查已保存配置」只检查配置本身，不联网验证 Key、余额或模型权限。
+- 计划模式：重新打开对话后恢复之前选的计划模式，后面的命令失败也不会把它清掉。
+- 手机操控：停止或换任务后，旧任务不会再启动应用、按键、点击或滚动；后台屏画面过期时会拒绝操作并要求刷新；横向列表的手势方向不再反；太短的滑动直接拒绝；所选模式和实际的 Shizuku / Sui 不一致时不再报就绪，并说明原因。
+- 远程：迟到的退出登录不会再删掉新登录的凭据，旧的登录动作不会切到你后来选的服务器；自建服务器邮箱登录时连按完成键不再重复提交；较大的设置写入不再执行两次。
+- 引擎：启动失败时先显示正在停止，并优先显示这次的原因；引擎服务没就绪不再被说成版本不支持；运行环境安装失败页可以直接导出诊断包；工作区索引损坏时可以改用独立的救援索引；插件安装输出里的中文和 emoji 不再乱码（#658）；空闲时排队的通知不再挡住永久删除对话（#687）；坏掉的 Agent 预设会显示实际的加载失败原因（#75）。
+- 运行环境：重置前确认相关进程都已退出；升级中途被打断时保留要带走的用户文件。安全模式移走危险文件只完成一部分时会如实报告，可以重试剩下的。
+- 文件和分享：很长的文件名按字节截短，不会切开表情，也保留扩展名。
+- 插件开发：插件省略能力参数时按 v1 的默认处理，不再当成空列表（#656）。
+
+### English
+
+- **Before you update: this version changes the runtime, so it's a full download again.** The built-in engine is still DSH 0.2.2-rc.1; what changed are the patches we apply to it. Only `/root` stays in the Linux environment, so software installed with `apt` and files in `/usr/local`, `/opt` and similar places need installing again. Chats and settings are kept.
+- **This version hasn't been verified on a real phone.** In-app video playback and saving videos to the gallery have only been through automated tests and compile checks, never played on a phone. If you hit a problem, please open an issue.
+- New chat page: suggestions are now small cards side by side, with a tip line below that changes on its own; tap it for the next tip. You can pick this chat's model, Agent preset and permissions right on the page; they apply before the first message is sent, and if applying them fails the message stays in the composer instead of going out.
+- Video: tap a video to play it in the app, with play, pause and seeking; if it won't play you can still open it in another app. Videos can be saved to the gallery too. A local video with no poster uses its first frame; a remote video is downloaded only when you open it.
+- Images: when an image fails to load you can tap Reload. It only reads the file again; it doesn't regenerate or charge for generation again.
+- Image and video settings: enter the API root as the address, and preview the request address while editing. Switching sites or reusing a key across sites asks first. Check saved configuration checks only the configuration; it doesn't go online to verify the key, balance or model access.
+- Plan mode: reopening a chat restores the plan mode you chose, and a later command failing no longer clears it.
+- Phone control: once a task stops or is replaced, the old one no longer launches apps, presses keys, taps or scrolls. Actions on a stale background screen are refused with a request to refresh. Gestures on horizontal lists no longer go the wrong way, swipes too short to register are refused, and when the selected mode doesn't match the actual Shizuku or Sui provider it no longer reports ready and says why.
+- Remote: a late sign-out no longer deletes the credentials of a newer sign-in, and an old sign-in action no longer switches to a server you picked later. Pressing Done repeatedly while signing in by email on a self-hosted server no longer submits twice, and large settings writes no longer run twice.
+- Engine: a failed start shows that it's stopping first and puts this attempt's reason ahead of older failures. An engine service that isn't ready is no longer reported as an unsupported version. The runtime install failure page can export a diagnostics bundle directly. A damaged workspace index can be swapped for a separate rescue index. Chinese and emoji in plugin install output are no longer garbled (#658). Notifications queued while idle no longer block deleting a chat for good (#687). A broken Agent preset shows the actual reason it failed to load (#75).
+- Runtime environment: a reset first makes sure the related processes have exited, and an upgrade interrupted halfway keeps the user files it was carrying over. When safe mode moves dangerous files away and only part of it succeeds, it says so and you can retry the rest.
+- Files and sharing: very long file names are shortened by bytes without splitting emoji, and keep their extension.
+- Plugin development: a plugin that leaves out the capabilities parameter gets the v1 default instead of an empty list (#656).
+
 ## 1.0.12 · 2026-11-07
 
 ### 中文

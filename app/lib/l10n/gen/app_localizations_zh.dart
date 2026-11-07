@@ -9027,6 +9027,102 @@ class L10nZh extends L10n {
   String get mediaSettingsEnabledHint => '关闭后不再用这个服务生成';
 
   @override
+  String get mediaConfigKeySaved => '已保存 · 未验证';
+
+  @override
+  String get mediaConfigKeyUnknown => '状态未知';
+
+  @override
+  String get mediaConfigKeyNote => '密钥是否存在以主机返回为准。保存不代表已验证身份或模型权限。';
+
+  @override
+  String mediaConfigConsumers(String services) {
+    return '使用此密钥的媒体服务：$services。修改或移除会影响这些服务；主机上的其他集成也可能使用它。';
+  }
+
+  @override
+  String get mediaConfigCheck => '检查已保存配置';
+
+  @override
+  String get mediaConfigCheckNote => '仅检查本地配置快照，不请求供应商，不产生生成费用。不验证密钥、连通性、余额、模型权限或地区；配置是否接受仍以主机为准。';
+
+  @override
+  String get mediaConfigCheckReady => '未发现本地配置问题';
+
+  @override
+  String get mediaConfigCheckMissingKey => '主机尚未报告已保存的密钥。';
+
+  @override
+  String get mediaConfigCheckModels => '未选择模型，或部分已选模型不在目录中、协议不匹配。';
+
+  @override
+  String get mediaConfigCheckDisabled => '此服务已关闭。';
+
+  @override
+  String get mediaConfigUrlInvalid => '请输入含主机名的 HTTPS API 根地址，不得包含凭据、查询参数、片段或空白。';
+
+  @override
+  String get mediaConfigUrlEndpoint => '这看起来是请求端点。请填写 API 根地址，主机会自动追加请求路径。';
+
+  @override
+  String get mediaConfigUrlRoot => '此协议只需来源地址（https://主机名），不要填写 API 路径。';
+
+  @override
+  String get mediaConfigUrlHint => '填写 API 根地址，而非生成端点。OpenAI 兼容服务保留其路径前缀（如 /v1）。';
+
+  @override
+  String get mediaConfigPreview => '创建请求预览';
+
+  @override
+  String get mediaConfigPreviewNote => '仅预览生成/创建请求；编辑和查询状态可能使用不同路径。预览不代表连通或已获主机接受。';
+
+  @override
+  String get mediaConfigPreviewUnavailable => '此主机目录未提供请求路径。';
+
+  @override
+  String get mediaConfigTargetTitle => '将密钥用于不同目标？';
+
+  @override
+  String mediaConfigTargetBody(String before, String after) {
+    return '目标将从 $before 更改为 $after。后续请求可能向新目标发送所引用的密钥，仅在信任该目标时继续。主机仍会校验此更改。';
+  }
+
+  @override
+  String get mediaConfigTargetConfirm => '信任目标并继续';
+
+  @override
+  String get mediaVideoLoading => '正在加载视频…';
+
+  @override
+  String get mediaVideoCannotPlay => '无法在 App 内播放此视频，请重试或使用其他应用打开。';
+
+  @override
+  String get mediaVideoPlay => '播放';
+
+  @override
+  String get mediaVideoPause => '暂停';
+
+  @override
+  String get mediaVideoSaveFailed => '视频保存失败，请重试。';
+
+  @override
+  String get mediaImageLoading => '正在加载图片';
+
+  @override
+  String get mediaImageReload => '重新加载';
+
+  @override
+  String get mediaImageReloadHint => '只重新读取文件，不会重新生成或收费';
+
+  @override
+  String get mediaVideoNoPoster => '轻点播放视频';
+
+  @override
+  String mediaSavedFilesCount(int count) {
+    return '已保存 $count 个文件到相册';
+  }
+
+  @override
   String get nearbyThisChat => '本对话';
 
   @override
@@ -17795,28 +17891,162 @@ class L10nZh extends L10n {
   String get viewUiMultiple => '可多选';
 
   @override
-  String get viewSuggestWorkspace => '看看工作区有什么';
+  String get viewSuggestWorkspace => '看看工作区';
 
   @override
   String get viewSuggestWorkspacePrompt => '看看工作区里现在有哪些文件和项目，简单介绍一下。';
 
   @override
-  String get viewSuggestWordCount => '写个词频统计脚本';
+  String get viewSuggestWordCount => '写个小脚本';
 
   @override
   String get viewSuggestWordCountPrompt => '写一个 Python 脚本：统计一个文本文件里出现最多的 20 个词，并运行一次给我看结果。';
 
   @override
-  String get viewSuggestNode => '新建 Node.js 项目';
+  String get viewSuggestNode => '新建项目';
 
   @override
   String get viewSuggestNodePrompt => '在工作区新建一个 Node.js 项目，配好 TypeScript 和一个最小的单元测试。';
 
   @override
-  String get viewSuggestGit => 'rebase 还是 merge';
+  String get viewSuggestGit => '讲讲 Git';
 
   @override
   String get viewSuggestGitPrompt => '用一个具体例子解释 git rebase 和 git merge 的区别，各自什么时候用。';
+
+  @override
+  String get viewSuggestWorkspaceHint => '列出文件和项目';
+
+  @override
+  String get viewSuggestWordCountHint => '统计词频并跑一次';
+
+  @override
+  String get viewSuggestNodeHint => 'Node.js 带测试';
+
+  @override
+  String get viewSuggestGitHint => 'rebase 和 merge';
+
+  @override
+  String get viewTipNext => '下一条小技巧';
+
+  @override
+  String viewTipLabel(String value) {
+    return '小技巧：$value';
+  }
+
+  @override
+  String get viewTipSteer => '生成中长按发送键，可以插话、排队或打断';
+
+  @override
+  String get viewTipMidRun => 'AI 干活时也能发消息，它下一步就会看到';
+
+  @override
+  String get viewTipSlash => '输入 / 唤出指令：压缩上下文、切换模型等';
+
+  @override
+  String get viewTipMention => '输入 @ 可以引用工作区里的文件或别的对话';
+
+  @override
+  String get viewTipReplyMenu => '长按 AI 的回复，可以复制、引用或重新生成';
+
+  @override
+  String get viewTipEditResend => '长按自己的消息，可以改写后重发，原对话不动';
+
+  @override
+  String get viewTipQuote => '选中回复里的一段，点「引用」就只追问那一段';
+
+  @override
+  String get viewTipTitleDetails => '点顶部的对话标题，能看改动、文件和终端';
+
+  @override
+  String get viewTipContextRing => '发送键旁的小圆环是上下文用量，点开看详情';
+
+  @override
+  String get viewTipDrawerMenu => '长按侧栏里的对话，可以置顶、改名或归档';
+
+  @override
+  String get viewTipSearch => '主机支持时，搜索对话还能搜到聊天内容，不只是标题';
+
+  @override
+  String get viewTipSettingsSearch => '长按侧栏的设置键，可以直接搜索设置项';
+
+  @override
+  String get viewTipQuickPanel => '在对话页向左滑，打开快捷入口';
+
+  @override
+  String get viewTipFolderNewChat => '长按侧栏的文件夹，可以直接在里面开新对话';
+
+  @override
+  String get viewTipSwitchHost => '点侧栏底部的主机名，可以切到电脑上的 DSH';
+
+  @override
+  String get viewTipPasteImage => '输入法里的截图和贴图，可以直接贴进输入框';
+
+  @override
+  String get viewTipLauncher => '长按桌面图标，可以直接语音提问或开新对话';
+
+  @override
+  String get viewTipPetBubble => '宠物冒泡时点一下，就跳到等你的那个对话';
+
+  @override
+  String get viewTipPetPlay => '连点宠物三下会挠痒痒，长按可以换宠物';
+
+  @override
+  String get viewTipActivityStrip => '生成时点一下状态条，看这一轮的完整轨迹';
+
+  @override
+  String get viewTipImageZoom => '看图时双击放大、双指缩放，长按可以保存';
+
+  @override
+  String get viewTipQueuedRecall => '排队中的消息可以撤回到输入框再改';
+
+  @override
+  String get viewTipKeyboard => '接了键盘：Ctrl+Enter 发送，连按两次 Esc 停止';
+
+  @override
+  String get viewTipShareIn => '在别的 App 里分享文字或图片给 DSH Go，会填进新对话';
+
+  @override
+  String get viewTipShareSelect => '分享对话时长按再滑动，可以一次选中多条消息';
+
+  @override
+  String get viewTipChartDrag => '回复里的图表可以左右拖动，看每个点的数值';
+
+  @override
+  String get viewTipCopyPath => '改动卡里长按某个文件，可以复制它的路径';
+
+  @override
+  String get viewTipCompanion => '「伙伴小屋」藏在切换主机的面板里';
+
+  @override
+  String get viewTipAnswerInline => 'AI 向你提问时，直接在输入框里打字就是回答';
+
+  @override
+  String get viewTipWallpaper => '壁纸可以拖动、缩放，还能调模糊和明暗';
+
+  @override
+  String get viewTipModelHere => '这里就能换模型、预设和权限，只对这次对话生效';
+
+  @override
+  String get viewNewChatFolder => '文件夹';
+
+  @override
+  String get viewNewChatPresetTitle => '这次对话的预设';
+
+  @override
+  String get viewNewChatPermissionTitle => '这次对话的权限';
+
+  @override
+  String get viewNewChatDefault => '默认';
+
+  @override
+  String get viewNewChatUnavailable => '不可用';
+
+  @override
+  String get viewNewChatChange => '更改';
+
+  @override
+  String get viewNewChatModesFailed => '没能设置预设或权限，消息还没发出';
 
   @override
   String get viewGreetingMorning => '早上好';

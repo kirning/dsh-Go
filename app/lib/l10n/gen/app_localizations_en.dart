@@ -9500,6 +9500,109 @@ class L10nEn extends L10n {
   String get mediaSettingsEnabledHint => 'Turns this service off for generation';
 
   @override
+  String get mediaConfigKeySaved => 'Saved · not verified';
+
+  @override
+  String get mediaConfigKeyUnknown => 'Status unavailable';
+
+  @override
+  String get mediaConfigKeyNote =>
+      'Key presence is reported by the host. Saving a key does not verify authentication or model access.';
+
+  @override
+  String mediaConfigConsumers(String services) {
+    return 'Media services using this key: $services. Changing or removing it affects all of them; other host integrations may also use it.';
+  }
+
+  @override
+  String get mediaConfigCheck => 'Check saved configuration';
+
+  @override
+  String get mediaConfigCheckNote =>
+      'Local snapshot only; no provider request or generation charge. Does not verify the key, connectivity, balance, model access, or region. The host remains the authority on accepted settings.';
+
+  @override
+  String get mediaConfigCheckReady => 'No local configuration issues found';
+
+  @override
+  String get mediaConfigCheckMissingKey => 'The host has not reported a saved key.';
+
+  @override
+  String get mediaConfigCheckModels =>
+      'No selected models, or some selected models are missing or use a different protocol.';
+
+  @override
+  String get mediaConfigCheckDisabled => 'This service is switched off.';
+
+  @override
+  String get mediaConfigUrlInvalid =>
+      'Enter an HTTPS API root with a host, without credentials, query, fragment, or whitespace.';
+
+  @override
+  String get mediaConfigUrlEndpoint =>
+      'This looks like a request endpoint. Enter the API root instead; the host appends the request path.';
+
+  @override
+  String get mediaConfigUrlRoot => 'This protocol needs the origin only (https://host), without an API path.';
+
+  @override
+  String get mediaConfigUrlHint =>
+      'Enter the API root, not a generation endpoint. OpenAI-compatible roots keep their prefix (for example /v1).';
+
+  @override
+  String get mediaConfigPreview => 'Create request preview';
+
+  @override
+  String get mediaConfigPreviewNote =>
+      'Generation/create request only; edits and status requests may use different paths. Preview is not proof of connectivity or host acceptance.';
+
+  @override
+  String get mediaConfigPreviewUnavailable => 'Request path unavailable in this host catalogue.';
+
+  @override
+  String get mediaConfigTargetTitle => 'Reuse key at a different target?';
+
+  @override
+  String mediaConfigTargetBody(String before, String after) {
+    return 'Target changes from $before to $after. Future requests may send the referenced key to the new target. Only continue if you trust it. The host still validates the change.';
+  }
+
+  @override
+  String get mediaConfigTargetConfirm => 'Trust target and continue';
+
+  @override
+  String get mediaVideoLoading => 'Loading video…';
+
+  @override
+  String get mediaVideoCannotPlay => 'This video could not be played here. Retry or open it in another app.';
+
+  @override
+  String get mediaVideoPlay => 'Play';
+
+  @override
+  String get mediaVideoPause => 'Pause';
+
+  @override
+  String get mediaVideoSaveFailed => 'Couldn’t save the video. Try again.';
+
+  @override
+  String get mediaImageLoading => 'Loading image';
+
+  @override
+  String get mediaImageReload => 'Reload image';
+
+  @override
+  String get mediaImageReloadHint => 'Reads the file again; does not generate again or incur generation charges';
+
+  @override
+  String get mediaVideoNoPoster => 'Tap to play video';
+
+  @override
+  String mediaSavedFilesCount(int count) {
+    return 'Saved $count files to gallery';
+  }
+
+  @override
   String get nearbyThisChat => 'This chat';
 
   @override
@@ -18801,25 +18904,159 @@ class L10nEn extends L10n {
       'Check what files and projects are in the workspace and give me a brief overview.';
 
   @override
-  String get viewSuggestWordCount => 'Count words';
+  String get viewSuggestWordCount => 'Write a script';
 
   @override
   String get viewSuggestWordCountPrompt =>
       'Write a Python script that finds the 20 most frequent words in a text file, then run it and show me the results.';
 
   @override
-  String get viewSuggestNode => 'Start Node.js';
+  String get viewSuggestNode => 'New project';
 
   @override
   String get viewSuggestNodePrompt =>
       'Create a Node.js project in the workspace with TypeScript and a minimal unit test.';
 
   @override
-  String get viewSuggestGit => 'Rebase or merge';
+  String get viewSuggestGit => 'Explain Git';
 
   @override
   String get viewSuggestGitPrompt =>
       'Use a concrete example to explain the difference between git rebase and git merge, and when to use each.';
+
+  @override
+  String get viewSuggestWorkspaceHint => 'List files and projects';
+
+  @override
+  String get viewSuggestWordCountHint => 'Count words, then run it';
+
+  @override
+  String get viewSuggestNodeHint => 'Node.js with tests';
+
+  @override
+  String get viewSuggestGitHint => 'Rebase or merge?';
+
+  @override
+  String get viewTipNext => 'Next tip';
+
+  @override
+  String viewTipLabel(String value) {
+    return 'Tip: $value';
+  }
+
+  @override
+  String get viewTipSteer => 'While it works, long-press Send to steer, queue or interrupt';
+
+  @override
+  String get viewTipMidRun => 'You can message mid-run — it reads it at the next step';
+
+  @override
+  String get viewTipSlash => 'Type / for commands: compact the context, switch models and more';
+
+  @override
+  String get viewTipMention => 'Type @ to reference a workspace file or another chat';
+
+  @override
+  String get viewTipReplyMenu => 'Long-press a reply to copy, quote or regenerate it';
+
+  @override
+  String get viewTipEditResend => 'Long-press your own message to edit and resend — the original stays';
+
+  @override
+  String get viewTipQuote => 'Select part of a reply and tap Quote to ask about just that';
+
+  @override
+  String get viewTipTitleDetails => 'Tap the chat title for changes, files and a terminal';
+
+  @override
+  String get viewTipContextRing => 'The ring by Send shows context use — tap it for details';
+
+  @override
+  String get viewTipDrawerMenu => 'Long-press a chat in the sidebar to pin, rename or archive it';
+
+  @override
+  String get viewTipSearch => 'Where the host supports it, chat search matches message content, not just titles';
+
+  @override
+  String get viewTipSettingsSearch => 'Long-press Settings in the sidebar to search settings';
+
+  @override
+  String get viewTipQuickPanel => 'Swipe left on a chat to open the quick panel';
+
+  @override
+  String get viewTipFolderNewChat => 'Long-press a folder in the sidebar to start a chat inside it';
+
+  @override
+  String get viewTipSwitchHost => 'Tap the host name at the sidebar\'s foot to switch to DSH on your computer';
+
+  @override
+  String get viewTipPasteImage => 'Screenshots and stickers from your keyboard can go straight into the composer';
+
+  @override
+  String get viewTipLauncher => 'Long-press the app icon to ask by voice or start a new chat';
+
+  @override
+  String get viewTipPetBubble => 'When the pet pops a bubble, tap it to jump to the chat that\'s waiting';
+
+  @override
+  String get viewTipPetPlay => 'Tap the pet three times to tickle it; long-press to swap it';
+
+  @override
+  String get viewTipActivityStrip => 'While it works, tap the status strip to see this turn\'s full trace';
+
+  @override
+  String get viewTipImageZoom => 'In the image viewer, double-tap or pinch to zoom; long-press to save';
+
+  @override
+  String get viewTipQueuedRecall => 'A queued message can be pulled back into the composer to edit';
+
+  @override
+  String get viewTipKeyboard => 'With a keyboard: Ctrl+Enter sends, Esc twice stops';
+
+  @override
+  String get viewTipShareIn => 'Share text or images to DSH Go from another app to start a new chat with them';
+
+  @override
+  String get viewTipShareSelect => 'When sharing a chat, long-press and slide to pick several messages at once';
+
+  @override
+  String get viewTipChartDrag => 'Drag across a chart in a reply to read each point';
+
+  @override
+  String get viewTipCopyPath => 'Long-press a file in a changes card to copy its path';
+
+  @override
+  String get viewTipCompanion => 'The Companion Room lives in the Switch Host sheet';
+
+  @override
+  String get viewTipAnswerInline => 'When the AI asks you something, just type the answer in the composer';
+
+  @override
+  String get viewTipWallpaper => 'Wallpapers can be dragged, zoomed, blurred and dimmed';
+
+  @override
+  String get viewTipModelHere => 'Pick the model, preset and permissions right here — for this chat only';
+
+  @override
+  String get viewNewChatFolder => 'Folder';
+
+  @override
+  String get viewNewChatPresetTitle => 'Preset for this chat';
+
+  @override
+  String get viewNewChatPermissionTitle => 'Permissions for this chat';
+
+  @override
+  String get viewNewChatDefault => 'Default';
+
+  @override
+  String get viewNewChatUnavailable => 'Unavailable';
+
+  @override
+  String get viewNewChatChange => 'Change';
+
+  @override
+  String get viewNewChatModesFailed => 'Couldn’t set the preset or permissions. The message wasn’t sent.';
 
   @override
   String get viewGreetingMorning => 'Good morning';

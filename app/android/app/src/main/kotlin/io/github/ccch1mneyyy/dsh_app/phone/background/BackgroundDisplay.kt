@@ -69,7 +69,12 @@ class BackgroundDisplay(
             putBoolean(Proto.DETAIL, detail)
             putBoolean(Proto.WANT_IMAGE, image)
         }
-        val response = channel().execute(request)
+        val response = try {
+            channel().execute(request)
+        } catch (e: Exception) {
+            clearSnapshot()
+            throw e
+        }
         requireObservation(response.getBoolean(Proto.OK), response.getString(Proto.ERROR), response.getString(Proto.ERROR_DETAIL))
         return snapshot(response, markNew = false)
     }
@@ -77,13 +82,22 @@ class BackgroundDisplay(
     /** A failed read is not an empty snapshot; old element numbers are no longer actionable. */
     internal fun requireObservation(ok: Boolean, code: String?, detail: String?) {
         if (ok) return
-        lastScreenId = null
-        lastElements = emptyList()
-        previousLabels = emptySet()
+        clearSnapshot()
         throw IllegalStateException(Reasons.of(code, detail))
     }
 
     override fun collect(screenId: String, listElementId: Int, maxPages: Int, until: String?): CollectResult {
+        check(screenId == lastScreenId) { Reasons.of("staleSnapshot") }
+        if (maxPages.coerceIn(1, 30) == 1) {
+            val selected = lastElements.getOrNull(listElementId - 1)
+                ?: throw IllegalStateException(Reasons.of("elementMissing"))
+            check(selected.isScrollable) { Reasons.of("inputRejected") }
+            val labels = lastElements.drop(listElementId)
+                .takeWhile { it.indent > selected.indent }
+                .map { it.label }.filter { it.isNotEmpty() }.distinct()
+            val stop = if (until != null && labels.any { it.contains(until) }) "untilMatched" else "pageLimit"
+            return CollectResult(labels, 1, stop, null)
+        }
         val seen = LinkedHashSet<String>()
         var pages = 0
         var stop = "listEnd"
@@ -97,7 +111,9 @@ class BackgroundDisplay(
             if (until != null && seen.any { it.contains(until) }) { stop = "untilMatched"; break }
             if (seen.size == before) { stop = "listEnd"; break }
             if (pages >= maxPages) { stop = "pageLimit"; break }
-            perform(PhoneAction.Scroll(screenId, listElementId, PhoneAction.Direction.DOWN))
+            // Preserve the legacy whole-page collect path; explicit list tracking is separate.
+            val result = perform(PhoneAction.Scroll(snap.id, null, PhoneAction.Direction.DOWN))
+            if (!result.ok) { stop = result.message; break }
         }
         return CollectResult(seen.toList(), pages, stop, last)
     }
@@ -126,6 +142,10 @@ class BackgroundDisplay(
             // l10n:keep agent screen protocol
             return ActionResult(false, "后台屏不支持该系统键，未执行；请用返回或打开指定应用")
         }
+        // Explicit element ids are checked by PhoneCore before perform; collect owns its internal scrolls.
+        if (action is PhoneAction.Scroll && action.elementId == null && action.screenId != lastScreenId) {
+            return ActionResult(false, Reasons.of("staleSnapshot"), staleSnapshot = true)
+        }
         val request = Bundle().apply {
             putString(Proto.OWNER, "task")
             putString(Proto.PKG, pkg)
@@ -149,6 +169,10 @@ class BackgroundDisplay(
             is PhoneAction.Scroll -> {
                 request.putString(Proto.OP, Proto.OP_SCROLL)
                 request.putString(Proto.DIR, action.direction.name.lowercase())
+                action.elementId?.let { id ->
+                    request.putInt(Proto.ELEMENT, id)
+                    fingerprint(id, request)
+                }
             }
             is PhoneAction.Key -> {
                 request.putString(Proto.OP, Proto.OP_KEY)
@@ -158,7 +182,9 @@ class BackgroundDisplay(
             is PhoneAction.TapXY -> return ActionResult(false, "后台屏按元素编号操作，不用坐标")
         }
         // l10n:keep agent screen protocol
-        return toResult(channel().execute(request), "已在后台屏执行")
+        val active = channel()
+        if (Thread.currentThread().isInterrupted) throw InterruptedException()
+        return toResult(active.execute(request), "已在后台屏执行")
     }
 
     override fun foregroundPackage(): String? = currentPackage
@@ -183,9 +209,20 @@ class BackgroundDisplay(
         e.viewId?.let { request.putString(Proto.EXPECT_VIEW_ID, it) }
     }
 
+    private fun clearSnapshot() {
+        lastScreenId = null
+        lastElements = emptyList()
+        previousLabels = emptySet()
+    }
+
     private fun toResult(response: Bundle, okMessage: String): ActionResult {
         val ok = response.getBoolean(Proto.OK)
         val message = if (ok) okMessage else Reasons.of(response.getString(Proto.ERROR), response.getString(Proto.ERROR_DETAIL))
+        if (!ok && response.getString(Proto.ERROR) == "staleSnapshot") {
+            // Invalidate before any optional snapshot decoding or subsequent refresh can fail.
+            clearSnapshot()
+            return ActionResult(false, message, staleSnapshot = true)
+        }
         val snap = if (response.containsKey(Proto.COUNT) || response.getBoolean(Proto.SECURE))
             snapshot(response, markNew = true) else null
         return ActionResult(ok, message, snap)
@@ -251,6 +288,7 @@ class BackgroundDisplay(
                     isSecretField = f and Proto.FLAG_SECRET != 0,
                     isEditable = f and Proto.FLAG_EDITABLE != 0,
                     viewId = viewIds?.getOrNull(i),
+                    isScrollable = f and Proto.FLAG_SCROLLABLE != 0,
                 ),
             )
         }

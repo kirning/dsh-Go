@@ -42,10 +42,10 @@ class PhoneToolSchemaTest {
         override fun system() = object : SystemApi {
             override fun apps() = emptyList<AppEntry>()
             override fun isInstalled(pkg: String) = false
-            override fun launch(app: AppEntry): SysResult = error("unexpected launch")
+            override fun launch(app: AppEntry, dispatch: PhoneTasks.SystemDispatch): SysResult = error("unexpected launch")
             override fun urlTarget(url: String): UrlTarget = error("unexpected URL")
-            override fun openUrl(url: String, target: UrlTarget): SysResult = error("unexpected URL")
-            override fun intent(spec: IntentSpec, shareTo: AppEntry?): SysResult { intents += spec; return SysResult(true, "done") }
+            override fun openUrl(url: String, target: UrlTarget, dispatch: PhoneTasks.SystemDispatch): SysResult = error("unexpected URL")
+            override fun intent(spec: IntentSpec, shareTo: AppEntry?, dispatch: PhoneTasks.SystemDispatch): SysResult { intents += spec; return SysResult(true, "done") }
             override fun notify(title: String, text: String): SysResult = error("unexpected notification")
             override fun clipboardSet(text: String): SysResult = error("unexpected clipboard")
             override fun clipboardGet(): SysResult = error("unexpected clipboard")

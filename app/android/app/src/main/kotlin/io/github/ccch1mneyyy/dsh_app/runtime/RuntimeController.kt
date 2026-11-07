@@ -314,7 +314,7 @@ class RuntimeController private constructor(private val app: Context) : DshProce
         if (!installer.isCurrent()) {
             error = "runtime not installed"
             setPhase(Phase.ERROR)
-            DshService.stopSelfIfRunning(app)
+            DshService.stopSelfIfRunning(app, runGen)
             return
         }
         baseUrl = null
@@ -336,13 +336,16 @@ class RuntimeController private constructor(private val app: Context) : DshProce
                 PhoneStorage.syncShortcut(installer.rootfs, storage)
                 // Phone control: bridge up and guest files written before DSH starts; off in safe mode.
                 val phone = PhoneControl.get(app).prepareLaunch(installer.rootfs, safe) { log(it, "system") }
-                if (!safe && !SessionSearchGuest.writeFiles(installer.rootfs)) {
+                val searchOverlay = !safe && SessionSearchGuest.writeFiles(installer.rootfs)
+                if (!safe && !searchOverlay) {
                     log("[dsh-app] message search overlay not written; searching matches titles only", "system")
                 }
-                if (!safe && !AppAuthGuest.writeFiles(app, installer.rootfs)) {
+                val authOverlay = !safe && AppAuthGuest.writeFiles(app, installer.rootfs)
+                if (!safe && !authOverlay) {
                     log("[dsh-app] subscription sign-in overlay not written; ChatGPT / Claude sign-in is unavailable", "system")
                 }
-                if (!safe && !SpeechGuest.writeFiles(installer.rootfs)) {
+                val speechOverlay = !safe && SpeechGuest.writeFiles(installer.rootfs)
+                if (!safe && !speechOverlay) {
                     log("[dsh-app] voice input overlay not written; the voice model keeps DSH's defaults", "system")
                 }
                 if (pendingPhoneStorage && !storage) log("[dsh-app] phone storage requested but permission not granted", "system")
@@ -363,18 +366,23 @@ class RuntimeController private constructor(private val app: Context) : DshProce
                         null
                     }
                 }
-                // Stopped (or started again) while this was queued: launching now would leave an orphan.
-                if (stopGen >= gen || gen != runGen) {
+                // startProcess advances runGen under this same monitor. Publish only while
+                // this queued launch still owns that generation; once published, its non-null
+                // process prevents another start from advancing the generation underneath it.
+                val p = synchronized(this@RuntimeController) {
+                    if (stopGen >= gen || gen != runGen) null
+                    else DshProcess(app, manifest, installer.rootfs, this).also {
+                        launched = it
+                        lastLaunch = it.launchDiagnostics
+                        process = it
+                    }
+                } ?: run {
                     PhoneControl.get(app).onEngineStopped()
                     return@execute
                 }
-                val p = DshProcess(app, manifest, installer.rootfs, this)
-                launched = p
-                lastLaunch = p.launchDiagnostics
-                process = p
                 timeline.spawned()
                 val direct = directEngine()
-                p.start(env, if (storage) PhoneStorage.binds() else emptyList(), safe, phone, direct.requested, direct.failed) { actualDirect ->
+                p.start(env, if (storage) PhoneStorage.binds() else emptyList(), safe, phone, direct.requested, direct.failed, searchOverlay, authOverlay, speechOverlay) { actualDirect ->
                     // SafeMode.prepare writes its own briefing; leave the original home untouched.
                     if (!safe) GuestSetup.writeAgentsMd(installer.rootfs, storage, phone, pendingVisualReplies, actualDirect)
                 }
@@ -396,14 +404,17 @@ class RuntimeController private constructor(private val app: Context) : DshProce
                     }
                     publishStartupFailure(startupError ?: e.message ?: e.javaClass.simpleName, ownerReleased = true)
                     log("[dsh-app] $error", "system")
-                    if (!resetting) DshService.stopSelfIfRunning(app)
+                    if (!resetting) DshService.stopSelfIfRunning(app, gen)
                 }
             }
         }
     }
 
-    @Synchronized internal fun stopProcess() {
-        if (phase == Phase.INSTALLING) return
+    @Synchronized internal fun stopProcess(expectedGeneration: Int? = null): Boolean {
+        // An automatic stop can arrive after a newer START service intent.
+        // Check under the same monitor that advances runGen and retires the process.
+        if (expectedGeneration != null && expectedGeneration != runGen) return false
+        if (phase == Phase.INSTALLING) return false
         stopGen = runGen
         val p = process
         if (p == null) {
@@ -418,17 +429,22 @@ class RuntimeController private constructor(private val app: Context) : DshProce
                 // Keep ERROR: the service's own stop after a crash must not hide the failure.
                 setPhase(Phase.INSTALLED)
             }
-            return
+            return true
         }
         setPhase(Phase.STOPPING)
         p.stop()
+        return true
     }
 
     /** The default network changed: point the guest's resolv.conf at its DNS. */
-    fun refreshDns(properties: LinkProperties) {
+    internal fun refreshDns(watch: NetworkAccess.Watch, properties: LinkProperties) {
+        val gen = runGen
         val servers = GuestSetup.pickDns(properties.dnsServers)
         worker.execute {
             if ((phase == Phase.RUNNING || phase == Phase.STARTING) && installer.isCurrent()) {
+                // Check ownership where this queued write executes, not only in the callback.
+                // If a stop/start follows this check, its startup DNS write is later on this worker.
+                if (gen != runGen || stopGen >= gen || !networkAccess.isCurrent(watch)) return@execute
                 noteDns(GuestSetup.writeResolvConf(installer.rootfs, servers), DnsConfigSource.NETWORK)
             }
         }
@@ -439,14 +455,16 @@ class RuntimeController private constructor(private val app: Context) : DshProce
     }
 
     /** The system blocked or restored this app's network (DshService's default network callback). */
-    internal fun onNetworkBlocked(blocked: Boolean, inForeground: Boolean) {
-        val line = networkAccess.onBlocked(blocked, inForeground) ?: return
+    internal fun onNetworkBlocked(watch: NetworkAccess.Watch, blocked: Boolean, inForeground: Boolean) {
+        val line = networkAccess.onBlocked(watch, blocked, inForeground) ?: return
         log(line, "system")
         emitStatus()
     }
 
-    /** DshService stopped watching the network. */
-    internal fun onNetworkWatchStopped() = networkAccess.reset()
+    internal fun onNetworkWatchStarted() = networkAccess.startWatch()
+
+    /** Retire only this registration; a late old service must not reset its replacement. */
+    internal fun onNetworkWatchStopped(watch: NetworkAccess.Watch) = networkAccess.reset(watch)
 
     /** A line of the app's own into the runtime log. */
     internal fun note(line: String) = log(line, "system")
@@ -465,6 +483,10 @@ class RuntimeController private constructor(private val app: Context) : DshProce
                     p.stop()
                     check(p.awaitExit(15_000)) { "runtime stop incomplete; retry reset after cleanup" }
                 }
+                // A finished waiter may have reported incomplete cleanup. Captured identities
+                // outlive its launcher; do not retire their rootfs while any still remain.
+                val cleanup = DshProcess(app, manifest, installer.rootfs, this).reapStrays()
+                check(cleanup.complete) { "runtime stop incomplete; retry reset after cleanup" }
                 lastLaunch = null
                 try {
                     check(runtimeLogs.pauseDisk()) { "log reset pause timed out" }
@@ -607,12 +629,14 @@ class RuntimeController private constructor(private val app: Context) : DshProce
         worker.execute {
             try {
                 checkRecoveryWrite(mainProfileOnly = false)
-                val moved = SafeMode.moveAside(installer.rootfs, paths, SafeMode.stamp())
+                val outcome = SafeMode.moveAside(installer.rootfs, paths, SafeMode.stamp())
+                val moved = outcome.moved
                 if (moved.isNotEmpty()) {
                     val record = JSONArray(movedAside() + moved.map { (from, to) -> "$from → $to" })
                     prefs.edit().putString(K_MOVED, record.toString()).apply()
                     moved.forEach { (from, to) -> log("[dsh-app] moved $from aside to $to", "system") }
                 }
+                outcome.failure?.let { throw it }
                 main.post { onDone(moved.map { (from, to) -> mapOf("from" to from, "to" to to) }, null) }
             } catch (e: Throwable) {
                 main.post { onDone(null, e) }
@@ -834,20 +858,25 @@ class RuntimeController private constructor(private val app: Context) : DshProce
             token = null
             healthyAt = null
             log("[dsh-app] DSH exited with code $code", "system")
-            if (publishStartupFailure(source.startupError, ownerReleased = true)) {
+            val tail = synchronized(runTail) { runTail.toList() }
+            var f = CrashClassifier.classify(code, readyAt, SystemClock.elapsedRealtime(), System.currentTimeMillis(), tail, runSafe, source.direct)
+            val startupError = source.startupError
+            // A token deadline must not hide crash evidence already in the tail (#75); a silent
+            // loader or a STOP that followed still ends as a plain startup failure.
+            val classifyStartup = startupError != null && !expected && stopGen < runGen &&
+                CrashClassifier.classifyAfterTokenTimeout(source.startupTokenTimedOut, f)
+            if (!classifyStartup && publishStartupFailure(startupError, ownerReleased = true)) {
                 // An accepted failure survives a later STOP. Reset still owns its final state.
                 // Neither a deadline nor a local launch error is evidence against a plugin.
                 if (!resetting) DshService.postStoppedAlert(app)
-                DshService.stopSelfIfRunning(app)
+                DshService.stopSelfIfRunning(app, runGen)
                 return
             }
             if (expected || stopGen >= runGen) {
                 if (!resetting && phase == Phase.STOPPING) setPhase(Phase.INSTALLED)
-                DshService.stopSelfIfRunning(app)
+                DshService.stopSelfIfRunning(app, runGen)
                 return
             }
-            val tail = synchronized(runTail) { runTail.toList() }
-            var f = CrashClassifier.classify(code, readyAt, SystemClock.elapsedRealtime(), System.currentTimeMillis(), tail, runSafe, source.direct)
             if (SafePolicy.directLaunchFailed(f, source.direct)) {
                 // Direct can't launch on this device: PRoot from now on with this runtime, no failure card,
                 // no strike. A new runtime, or the user turning Direct on again, gives it another try.
@@ -880,7 +909,7 @@ class RuntimeController private constructor(private val app: Context) : DshProce
             prefs.edit().putInt(K_STRIKES, strikes).apply()
             if (outcome.state != safeState) setSafeState(outcome.state, outcome.reason ?: safeReason)
             log("[dsh-app] classified as ${f.kind.wire}${if (f.safeMode) " (safe mode)" else ""}; consecutive failures: $strikes", "system")
-            error = "DSH exited unexpectedly (code $code)"
+            error = startupError?.let { "start failed: $it" } ?: "DSH exited unexpectedly (code $code)"
             if (outcome.restartSafe) {
                 log("[dsh-app] restarting in safe mode", "system")
                 outcome.notice?.let { notice(it) }
@@ -888,7 +917,7 @@ class RuntimeController private constructor(private val app: Context) : DshProce
             } else {
                 setPhase(Phase.ERROR)
                 DshService.postStoppedAlert(app)
-                DshService.stopSelfIfRunning(app)
+                DshService.stopSelfIfRunning(app, runGen)
             }
         } finally {
             runtimeLogs.flush()

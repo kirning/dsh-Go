@@ -1,5 +1,6 @@
 package io.github.ccch1mneyyy.dsh_app.phone
 
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Callable
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
@@ -17,20 +18,25 @@ import java.util.concurrent.atomic.AtomicLong
  * interrupted; if its thread doesn't come back, the worker thread is abandoned and replaced so the
  * queue never wedges behind a stuck driver.
  */
-class SerialWorker(private val name: String) {
+class SerialWorker internal constructor(
+    private val name: String,
+    private val clock: () -> Long,
+    private val awaitFinished: (CountDownLatch) -> Boolean,
+) {
+    constructor(name: String) : this(name, ::now, { it.await(1000, TimeUnit.MILLISECONDS) })
 
-    class Scope internal constructor() {
+    class Scope internal constructor(private val clock: () -> Long = ::now) {
         internal val waited = AtomicLong()
         @Volatile internal var waitingSince = 0L
 
         /** Runs [block] (which waits for the person) without charging it to the call's own budget. */
         fun <T> userWait(block: () -> T): T {
-            val start = now()
+            val start = clock()
             waitingSince = start
             try {
                 return block()
             } finally {
-                waited.addAndGet(now() - start)
+                waited.addAndGet(clock() - start)
                 waitingSince = 0L
             }
         }
@@ -64,13 +70,14 @@ class SerialWorker(private val name: String) {
     /** Runs [job] on the worker; blocks the caller until it finishes or overruns. */
     fun <T> run(budgetMs: Long, maxTotalMs: Long, job: (Scope) -> T): Outcome<T> {
         val admittedEpoch = synchronized(retirementLock) { retirementEpoch }
-        val scope = Scope()
-        val submitted = now()
+        val scope = Scope(clock)
+        val submitted = clock()
         val startedAt = AtomicLong(0)
+        val finished = CountDownLatch(1)
         val exec = executor
         val future: Future<T> = try {
             exec.submit(Callable {
-                startedAt.set(now())
+                startedAt.set(clock())
                 val self = Thread.currentThread()
                 try {
                     synchronized(retirementLock) {
@@ -82,6 +89,7 @@ class SerialWorker(private val name: String) {
                     synchronized(retirementLock) {
                         current.compareAndSet(self, null)
                         Thread.interrupted() // don't leak an interrupt into the next job
+                        finished.countDown()
                     }
                 }
             })
@@ -92,7 +100,7 @@ class SerialWorker(private val name: String) {
             try {
                 return Outcome.Done(future.get(POLL_MS, TimeUnit.MILLISECONDS))
             } catch (_: TimeoutException) {
-                val t = now()
+                val t = clock()
                 val started = startedAt.get()
                 if (started == 0L) {
                     if (t - submitted > maxTotalMs) {
@@ -103,8 +111,8 @@ class SerialWorker(private val name: String) {
                 }
                 if (scope.charged(started, t) > budgetMs || t - submitted > maxTotalMs) {
                     future.cancel(true)
-                    abandonIfStuck(exec, future)
-                    return Outcome.TimedOut(queued = false)
+                    abandonIfStuck(exec, finished)
+                    return if (Thread.currentThread().isInterrupted) Outcome.Interrupted else Outcome.TimedOut(queued = false)
                 }
             } catch (e: ExecutionException) {
                 val cause = e.cause ?: e
@@ -144,15 +152,23 @@ class SerialWorker(private val name: String) {
         }
     }
 
-    /** A cancelled future reports done at once; the thread is free only once [current] clears. */
-    private fun abandonIfStuck(exec: ExecutorService, future: Future<*>) {
-        val stuck = current.get() ?: return
-        val deadline = now() + 1000
-        while (current.get() === stuck && now() < deadline) Thread.sleep(20)
-        if (current.get() === stuck && executor === exec) {
-            current.compareAndSet(stuck, null)
-            executor = newExecutor()
-            shutdown(exec)
+    /** Cancellation completes the Future before its body exits; wait for this job's own finally. */
+    private fun abandonIfStuck(exec: ExecutorService, finished: CountDownLatch) {
+        if (finished.count == 0L) return
+        try {
+            if (awaitFinished(finished)) return
+        } catch (_: InterruptedException) {
+            // Cancellation of the caller must not skip this job's retirement check.
+            Thread.currentThread().interrupt()
+        }
+        synchronized(retirementLock) {
+            // The job can finish as its grace period expires. Its successor may reuse the same
+            // thread, so only this completion signal can authorize retiring the executor.
+            if (finished.count != 0L && executor === exec) {
+                current.set(null)
+                executor = newExecutor()
+                shutdown(exec)
+            }
         }
     }
 

@@ -62,7 +62,11 @@ function parseCaps(sp) {
     components,
     features,
     key: JSON.stringify([versions, app, locale.toLowerCase(), ...(features.length ? [features] : []), ...(placements.length ? [placements] : [])]),
-    forPlugin: () => ({ protocol: PROTOCOL, app, locale, surfaces: [...surfaces], components: [...components], ...(features.length ? { features: [...features] } : {}) }),
+    // Omitted lists preserve the SDK's v1 defaults; explicit empty lists stay empty.
+    forPlugin: () => ({ protocol: PROTOCOL, app, locale,
+      ...(sp.has("surfaces") ? { surfaces: [...surfaces] } : {}),
+      ...(sp.has("components") ? { components: [...components] } : {}),
+      ...(features.length ? { features: [...features] } : {}) }),
   };
 }
 

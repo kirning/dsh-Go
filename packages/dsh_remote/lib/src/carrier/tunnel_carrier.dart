@@ -469,7 +469,9 @@ class RemoteTunnelCarrier extends DshCarrier implements WorkspaceUploadCarrier {
           if (error.isLocal ||
               error.code != 'RESPONSE_TOO_LARGE' ||
               endpoint == 'commands/execute' ||
-              endpoint == 'settings/mutate') {
+              endpoint == 'settings/mutate' ||
+              endpoint == 'settings/update' ||
+              endpoint == 'settings/replace') {
             rethrow;
           }
           response = await _callTransferred(session, endpoint, encoded, timeout);

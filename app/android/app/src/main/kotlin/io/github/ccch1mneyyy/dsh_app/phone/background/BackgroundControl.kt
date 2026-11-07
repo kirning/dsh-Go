@@ -35,6 +35,7 @@ class BackgroundControl private constructor(context: Context) {
 
     private val keepGuard = Any()
     private val preferenceGuard = Any()
+    @Volatile private var selectionChange: Any? = null
     private val keepPrefs = app.getSharedPreferences("phone-privileged-keep", Context.MODE_PRIVATE)
     private val keep = PrivilegedKeepState(keepPrefs.getString("keptMode", "off") ?: "off",
         PhoneControl.switchedOn(app), Build.VERSION.SDK_INT >= BackgroundPolicy.MIN_SDK)
@@ -116,13 +117,23 @@ class BackgroundControl private constructor(context: Context) {
     private fun readiness(): String? = when {
         mode == "off" -> AppStrings.get(app, R.string.background_off)
         !androidOk() -> AppStrings.get(app, R.string.background_requires_android)
-        mode == "shizuku" || mode == "sui" -> shizuku.reason() ?: gateReason()
+        mode == "shizuku" || mode == "sui" -> shizuku.reason() ?: run {
+            val provider = shizuku.status().provider
+            if (provider == mode) gateReason() else when (provider) {
+                ShizukuStatus.SUI -> AppStrings.get(app, R.string.background_provider_mismatch, "Shizuku", "Sui")
+                ShizukuStatus.SHIZUKU -> AppStrings.get(app, R.string.background_provider_mismatch, "Sui", "Shizuku")
+                else -> AppStrings.get(app, R.string.background_not_ready)
+            }
+        }
         mode == "root" -> rootReason() ?: gateReason()
         mode == "adb" -> adb.reason() ?: gateReason()
         else -> AppStrings.get(app, R.string.background_unknown_mode)
     }
 
     private fun gateReason(): String? {
+        if (keep.connectionUnavailable(channel?.alive() == true)) {
+            return AppStrings.get(app, R.string.background_not_ready)
+        }
         val cached = gate.snapshot
         return when {
             cached.connectionError != null -> AppStrings.get(app, cached.connectionError)
@@ -166,15 +177,34 @@ class BackgroundControl private constructor(context: Context) {
             return mapOf("ok" to false, "reason" to AppStrings.get(app, R.string.background_sui_not_provider))
         }
         if (selected != "off" && !androidOk()) return mapOf("ok" to false, "reason" to AppStrings.get(app, R.string.background_requires_android))
-        if (selected != mode || selected == "off") {
-            endTask()
-            // Only the transport being left closes: a paired ADB connection or a root process
-            // prepared ahead belongs to the mode being enabled. Off closes everything.
+        val changing = selected != mode || selected == "off"
+        // Release through the old live cache before retiring that selection.
+        if (changing) endTask()
+        val (selection, transition) = synchronized(keepGuard) {
+            if (!mayStart() || selectionChange != null) return keepFailure("selectionChanged")
             val leaving = if (mode == "sui") "shizuku" else mode
-            disconnectAll { selected == "off" || it == leaving }
-            gate.reset()
+            val owner = if (changing) Any().also { selectionChange = it } else null
+            keep.select(selected)
+            rootSelected = selected == "root"
+            if (changing) channel = null
+            keep.selectionTicket() to owner?.let { it to leaving }
         }
-        synchronized(keepGuard) { keep.select(selected); rootSelected = selected == "root" }
+        if (transition != null) {
+            try {
+                // Retire the old family before admitting new borrowers; no long IPC under keepGuard.
+                disconnectTransports { selected == "off" || it == transition.second }
+                gate.reset()
+            } finally {
+                val finished = synchronized(keepGuard) {
+                    if (selectionChange !== transition.first) false
+                    else { selectionChange = null; true }
+                }
+                // configure() may have changed keep generation while cleanup ran. The transition
+                // owns its own completion, and a newly saved keep must get another restore chance.
+                if (finished) restoreKeptChannel()
+            }
+        }
+        val allowed = { mayStart() && selectionChange == null && keep.selectionCurrent(selection) }
         val cleared = synchronized(preferenceGuard) {
             keep.keptMode != "off" || keepPrefs.edit().putString("keptMode", "off").commit()
         }
@@ -184,12 +214,14 @@ class BackgroundControl private constructor(context: Context) {
             "off" -> { notifyChanged(); return mapOf("ok" to true) }
             "shizuku", "sui" -> shizuku.ensureListeners()
             // 不打扰模式's only su; tasks just connect() to what it leaves.
-            "root" -> root.start(mayStart)?.let { if (mayStart() && mode == "root") channel = it }
+            "root" -> root.start(allowed)?.let { connected ->
+                synchronized(keepGuard) { if (allowed()) channel = connected }
+            }
         }
         notifyChanged()
-        if (!mayStart()) return keepFailure("selectionChanged")
+        if (!allowed()) return keepFailure("selectionChanged")
         // Probe eagerly so the UI can hide an unsupported switch rather than fail later.
-        val probe = runGateProbe(mayStart)
+        val probe = runGateProbe(allowed)
         return mapOf("ok" to (probe == null), "reason" to probe)
     }
 
@@ -367,21 +399,39 @@ class BackgroundControl private constructor(context: Context) {
 
     private fun activeChannel(mayStart: () -> Boolean = { true }, explicit: Boolean = false): PrivilegedChannel? {
         if (!mayStart()) return null
-        val observed = gate.snapshot
-        channel?.takeIf { it.alive() }?.let { gate.connected(observed, it); return it }
-        if (keep.enabled && !explicit) return null
-        channel = when (mode) {
-            "shizuku", "sui" -> shizuku.connect(mayStart = mayStart)
-            "root" -> root.connect()
-            "adb" -> adb.connect(mayStart = mayStart)
-            else -> null
+        val (selection, cached) = synchronized(keepGuard) {
+            if (selectionChange != null) return null
+            keep.selectionTicket() to channel
         }
-        channel?.let { gate.connected(observed, it) }
-        return channel
+        // Starter guards may call this; only volatile reads, never keepGuard acquisition.
+        val allowed = { mayStart() && selectionChange == null && keep.selectionCurrent(selection) }
+        val selected = selection.mode
+        // Disabling keep does not authorize a different shared-API provider.
+        if ((selected == "shizuku" || selected == "sui") && shizuku.status().provider != selected) return null
+        val observed = gate.snapshot
+        if (cached?.alive() == true) return synchronized(keepGuard) {
+            if (!allowed() || channel !== cached) null
+            else { gate.connected(observed, cached); cached }
+        }
+        if (!allowed() || (keep.enabled && !explicit)) return null
+        val connected = when (selected) {
+            "shizuku", "sui" -> shizuku.connect(mayStart = allowed)
+            "root" -> root.connect()
+            "adb" -> adb.connect(mayStart = allowed)
+            else -> null
+        } ?: return null
+        return synchronized(keepGuard) {
+            if (!allowed()) null
+            else { channel = connected; gate.connected(observed, connected); connected }
+        }
     }
 
     private fun disconnectAll(closes: (String) -> Boolean = { true }) {
-        channel = null
+        synchronized(keepGuard) { channel = null }
+        disconnectTransports(closes)
+    }
+
+    private fun disconnectTransports(closes: (String) -> Boolean) {
         if (closes("shizuku")) shizuku.disconnect()
         if (closes("adb")) adb.disconnect()
         if (closes("root")) root.disconnect()
@@ -491,6 +541,8 @@ class BackgroundControl private constructor(context: Context) {
         if (!PhoneControl.switchedOn(app) || !androidOk() || !keep.enabled) return null
         updateKeepListeners()
         synchronized(keepGuard) {
+            // The switch's finally retries after cleanup, including a keep saved during the switch.
+            if (selectionChange != null) return null
             restoring?.let {
                 if (restoringTicket?.let(keep::current) != true) restoreAgain = true
                 return it
@@ -550,9 +602,9 @@ class BackgroundControl private constructor(context: Context) {
                 else -> null
             }
             // Starter publication owns successful channels. A stale borrower must never close one.
+            val connected = value?.takeIf { it.alive() }
             synchronized(keepGuard) {
-                val connected = value
-                if (keep.current(ticket) && connected?.alive() == true) {
+                if (selectionChange == null && keep.current(ticket) && connected != null) {
                     channel = connected
                     gate.connected(observed, connected)
                 }

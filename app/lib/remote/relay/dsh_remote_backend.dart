@@ -417,7 +417,12 @@ class DshRemoteRelayBackend implements RelayBackend, RelayNetworkBackend {
 
 /// dsh_remote's secret-store interface over the app's (Keystore-backed) one.
 class _Secrets implements remote.SecretStore {
-  _Secrets(this._inner);
+  factory _Secrets(SecretStore inner) => _adapters[inner] ??= _Secrets._(inner);
+
+  _Secrets._(this._inner);
+
+  // Backend replacements still use the same package storage ownership scope.
+  static final _adapters = Expando<_Secrets>();
 
   final SecretStore _inner;
 

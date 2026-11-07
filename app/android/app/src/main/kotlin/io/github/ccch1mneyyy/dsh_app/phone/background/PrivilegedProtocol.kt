@@ -13,7 +13,7 @@ import java.io.OutputStream
 // accepts only this fixed verb set — no shell commands, paths or display ids from callers.
 
 object Proto {
-    const val REVISION = "dsh-vdisplay-1"
+    const val REVISION = "dsh-vdisplay-2"
 
     // request keys
     const val OP = "op"

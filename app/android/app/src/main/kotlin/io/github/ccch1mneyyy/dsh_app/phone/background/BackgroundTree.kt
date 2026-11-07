@@ -37,6 +37,8 @@ data class Element(
     val isSecretField: Boolean = false,
     val isEditable: Boolean = false,
     val viewId: String? = null,
+    /** Raw accessibility scrollability; role text alone does not establish a container. */
+    val isScrollable: Boolean = false,
 )
 
 object BackgroundTree {

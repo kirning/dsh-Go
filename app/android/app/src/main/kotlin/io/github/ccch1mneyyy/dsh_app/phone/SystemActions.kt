@@ -97,13 +97,13 @@ class SystemActions(private val app: Context) : SystemApi {
         }
     }
 
-    override fun launch(app: AppEntry): SysResult {
+    override fun launch(app: AppEntry, dispatch: PhoneTasks.SystemDispatch): SysResult {
         val intent = pm.getLaunchIntentForPackage(app.packageName)
             // l10n:keep agent tool result
             ?: return SysResult(false, "「${app.label}」没有可以打开的界面。")
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
         // l10n:keep agent tool result
-        return start(intent, "打开「${app.label}」", "已打开「${app.label}」。", app.packageName, app.label, AppStrings.get(this.app, R.string.phone_notice_open_app, app.label))
+        return start(dispatch, intent, "打开「${app.label}」", "已打开「${app.label}」。", app.packageName, app.label, AppStrings.get(this.app, R.string.phone_notice_open_app, app.label))
     }
 
     override fun urlTarget(url: String): UrlTarget {
@@ -116,11 +116,11 @@ class SystemActions(private val app: Context) : SystemApi {
         return if (pkg == null || pkg == "android") UrlTarget() else UrlTarget(packageName = pkg, appLabel = labelOf(pkg))
     }
 
-    override fun openUrl(url: String, target: UrlTarget): SysResult {
+    override fun openUrl(url: String, target: UrlTarget, dispatch: PhoneTasks.SystemDispatch): SysResult {
         // l10n:keep agent tool result
         val where = target.appLabel?.let { "（用「$it」）" } ?: ""
         // l10n:keep agent tool result
-        return start(viewIntent(url), "打开链接$where", "已打开链接$where。", target.packageName, target.appLabel,
+        return start(dispatch, viewIntent(url), "打开链接$where", "已打开链接$where。", target.packageName, target.appLabel,
             target.appLabel?.let { AppStrings.get(app, R.string.phone_notice_open_url_in, it) } ?: AppStrings.get(app, R.string.phone_notice_open_url))
     }
 
@@ -133,7 +133,7 @@ class SystemActions(private val app: Context) : SystemApi {
             selector = null
         }
 
-    override fun intent(spec: IntentSpec, shareTo: AppEntry?): SysResult = when (spec) {
+    override fun intent(spec: IntentSpec, shareTo: AppEntry?, dispatch: PhoneTasks.SystemDispatch): SysResult = when (spec) {
         is IntentSpec.Alarm -> {
             val i = Intent(AlarmClock.ACTION_SET_ALARM)
                 .putExtra(AlarmClock.EXTRA_HOUR, spec.hour)
@@ -144,7 +144,7 @@ class SystemActions(private val app: Context) : SystemApi {
             // l10n:keep agent tool result
             val days = if (spec.days.isEmpty()) "" else "，重复：" + spec.days.joinToString("") { "一二三四五六日"[it - 1].toString() }.let { "周$it" }
             // l10n:keep agent tool result
-            startResolved(i, "设置闹钟", "已打开时钟设置 $time 的闹钟$days。有的手机直接保存，有的要用户点一下确认。", noticeWhat = AppStrings.get(app, R.string.phone_notice_alarm))
+            startResolved(dispatch, i, "设置闹钟", "已打开时钟设置 $time 的闹钟$days。有的手机直接保存，有的要用户点一下确认。", noticeWhat = AppStrings.get(app, R.string.phone_notice_alarm))
         }
         is IntentSpec.Timer -> {
             val i = Intent(AlarmClock.ACTION_SET_TIMER)
@@ -152,7 +152,7 @@ class SystemActions(private val app: Context) : SystemApi {
                 .putExtra(AlarmClock.EXTRA_SKIP_UI, false)
             spec.message?.let { i.putExtra(AlarmClock.EXTRA_MESSAGE, it) }
             // l10n:keep agent tool result
-            startResolved(i, "设置计时器", "已打开时钟设置 ${spec.seconds} 秒的计时器，请用户点开始。", noticeWhat = AppStrings.get(app, R.string.phone_notice_timer))
+            startResolved(dispatch, i, "设置计时器", "已打开时钟设置 ${spec.seconds} 秒的计时器，请用户点开始。", noticeWhat = AppStrings.get(app, R.string.phone_notice_timer))
         }
         is IntentSpec.Calendar -> {
             val i = Intent(Intent.ACTION_INSERT)
@@ -166,9 +166,9 @@ class SystemActions(private val app: Context) : SystemApi {
             // l10n:keep agent tool result
             val fmt = SimpleDateFormat(if (spec.allDay) "M月d日（全天）" else "M月d日 HH:mm", Locale.CHINA)
             // l10n:keep agent tool result
-            startResolved(i, "新建日程", "已打开日历新建「${spec.title}」，${fmt.format(Date(spec.beginMs))}。请用户核对后点保存。", noticeWhat = AppStrings.get(app, R.string.phone_notice_calendar))
+            startResolved(dispatch, i, "新建日程", "已打开日历新建「${spec.title}」，${fmt.format(Date(spec.beginMs))}。请用户核对后点保存。", noticeWhat = AppStrings.get(app, R.string.phone_notice_calendar))
         }
-        is IntentSpec.Dial -> startResolved(
+        is IntentSpec.Dial -> startResolved(dispatch,
             Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(spec.number))),
             // l10n:keep agent tool result
             "打开拨号盘",
@@ -180,24 +180,24 @@ class SystemActions(private val app: Context) : SystemApi {
             val i = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + (spec.number?.let { Uri.encode(it) } ?: "")))
                 .putExtra("sms_body", spec.text)
             // l10n:keep agent tool result
-            startResolved(i, "写短信", "已打开短信草稿" + (spec.number?.let { "（发给 $it）" } ?: "") + "，没有发送；由用户确认后点发送。", noticeWhat = AppStrings.get(app, R.string.phone_notice_sms))
+            startResolved(dispatch, i, "写短信", "已打开短信草稿" + (spec.number?.let { "（发给 $it）" } ?: "") + "，没有发送；由用户确认后点发送。", noticeWhat = AppStrings.get(app, R.string.phone_notice_sms))
         }
         is IntentSpec.Share -> {
             val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, spec.text)
             if (shareTo != null) {
                 send.setPackage(shareTo.packageName)
                 // l10n:keep agent tool result
-                startResolved(send, "分享到「${shareTo.label}」", "已把文字分享到「${shareTo.label}」，由用户选择联系人并发送。", shareTo.label, AppStrings.get(app, R.string.phone_notice_share_to, shareTo.label))
+                startResolved(dispatch, send, "分享到「${shareTo.label}」", "已把文字分享到「${shareTo.label}」，由用户选择联系人并发送。", shareTo.label, AppStrings.get(app, R.string.phone_notice_share_to, shareTo.label))
             } else {
                 // l10n:keep agent tool result
-                start(Intent.createChooser(send, AppStrings.get(app, R.string.phone_share_chooser)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "分享", "已打开分享面板，由用户选择发给谁。", null, null, AppStrings.get(app, R.string.phone_notice_share))
+                start(dispatch, Intent.createChooser(send, AppStrings.get(app, R.string.phone_share_chooser)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "分享", "已打开分享面板，由用户选择发给谁。", null, null, AppStrings.get(app, R.string.phone_notice_share))
             }
         }
-        is IntentSpec.Navigate -> navigate(spec)
-        is IntentSpec.Settings -> settings(spec, shareTo)
+        is IntentSpec.Navigate -> navigate(dispatch, spec)
+        is IntentSpec.Settings -> settings(dispatch, spec, shareTo)
     }
 
-    private fun navigate(n: IntentSpec.Navigate): SysResult {
+    private fun navigate(dispatch: PhoneTasks.SystemDispatch, n: IntentSpec.Navigate): SysResult {
         val candidates = ArrayList<Triple<String, String?, String>>() // uri, package, name
         // l10n:keep agent tool result
         val amap = Triple(NavUris.amap(n), NavUris.AMAP, "高德地图")
@@ -216,7 +216,7 @@ class SystemActions(private val app: Context) : SystemApi {
             val i = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).setPackage(pkg)
             if (pm.resolveActivity(i, 0) == null) continue
             // l10n:keep agent tool result
-            return start(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "导航", "已在「$name」打开到「${n.destination ?: "${n.lat},${n.lng}"}」的路线，由用户确认后开始导航。", pkg, name, AppStrings.get(app, R.string.phone_notice_navigate))
+            return start(dispatch, i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "导航", "已在「$name」打开到「${n.destination ?: "${n.lat},${n.lng}"}」的路线，由用户确认后开始导航。", pkg, name, AppStrings.get(app, R.string.phone_notice_navigate))
         }
         val geo = Intent(Intent.ACTION_VIEW, Uri.parse(NavUris.geo(n)))
         if (pm.resolveActivity(geo, 0) == null) {
@@ -226,10 +226,10 @@ class SystemActions(private val app: Context) : SystemApi {
         // l10n:keep agent tool result
         val note = if (n.map != null) "没装指定的地图，" else ""
         // l10n:keep agent tool result
-        return start(geo.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "导航", "${note}已用地图应用打开「${n.destination ?: "${n.lat},${n.lng}"}」，由用户选路线。", null, null, AppStrings.get(app, R.string.phone_notice_navigate))
+        return start(dispatch, geo.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "导航", "${note}已用地图应用打开「${n.destination ?: "${n.lat},${n.lng}"}」，由用户选路线。", null, null, AppStrings.get(app, R.string.phone_notice_navigate))
     }
 
-    private fun settings(s: IntentSpec.Settings, app: AppEntry?): SysResult {
+    private fun settings(dispatch: PhoneTasks.SystemDispatch, s: IntentSpec.Settings, app: AppEntry?): SysResult {
         val action = when (s.page) {
             "home" -> Settings.ACTION_SETTINGS
             "wifi" -> Settings.ACTION_WIFI_SETTINGS
@@ -259,7 +259,7 @@ class SystemActions(private val app: Context) : SystemApi {
             if (s.page == "battery") intent = Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)
             if (pm.resolveActivity(intent, 0) == null) intent = Intent(Settings.ACTION_SETTINGS)
         }
-        return start(
+        return start(dispatch,
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             // l10n:keep agent tool result
             "打开设置",
@@ -273,12 +273,12 @@ class SystemActions(private val app: Context) : SystemApi {
     }
 
     /** Starts [intent] after checking something handles it; the result names the app that does. */
-    private fun startResolved(intent: Intent, what: String, done: String, label: String? = null, noticeWhat: String = what): SysResult {
+    private fun startResolved(dispatch: PhoneTasks.SystemDispatch, intent: Intent, what: String, done: String, label: String? = null, noticeWhat: String = what): SysResult {
         val ri = pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
             // l10n:keep agent tool result
             ?: return SysResult(false, "手机上没有能处理「$what」的应用。")
         val pkg = ri.activityInfo?.packageName?.takeIf { it != "android" }
-        return start(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), what, done, pkg, label ?: labelOf(pkg), noticeWhat)
+        return start(dispatch, intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), what, done, pkg, label ?: labelOf(pkg), noticeWhat)
     }
 
     /**
@@ -286,7 +286,9 @@ class SystemActions(private val app: Context) : SystemApi {
      * accessibility service is bound. Otherwise we still try, and also post a notification the
      * person can tap (a notification tap always may start it).
      */
-    private fun start(intent: Intent, what: String, done: String, pkg: String?, label: String?, noticeWhat: String = what): SysResult {
+    private fun start(dispatch: PhoneTasks.SystemDispatch, intent: Intent, what: String, done: String, pkg: String?, label: String?, noticeWhat: String = what): SysResult {
+        // This commits once; stop does not retract a start already committed here.
+        if (!dispatch.commitStart()) throw InterruptedException(PhoneTasks.STOPPED_MESSAGE)
         try {
             app.startActivity(intent)
         } catch (_: ActivityNotFoundException) {
@@ -298,21 +300,34 @@ class SystemActions(private val app: Context) : SystemApi {
         }
         val exempt = AppVisibility.visible || PhoneRegistry.mainDriver != null || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
         if (exempt) return SysResult(true, done, pkg, label)
-        postOpen(intent, noticeWhat)
+        val noticeRequested = postOpen(dispatch, intent, noticeWhat)
         return SysResult(
             true,
             // l10n:keep agent tool result
-            "$done（DSH 不在前台，系统可能拦下后台弹出的界面；已发通知「$what」，用户点一下就能打开。）",
+            if (noticeRequested) "$done（DSH 不在前台，系统可能拦下后台弹出的界面；已发通知「$what」，用户点一下就能打开。）"
+            // l10n:keep agent tool result
+            else "已尝试$what（DSH 不在前台，系统可能拦下后台弹出的界面；应用通知或打开操作的通知渠道已关闭，无法提供通知点击入口。请用户查看目标界面是否已打开。）",
             pkg,
             label,
         )
     }
 
-    private fun postOpen(intent: Intent, what: String) {
+    private fun postOpen(dispatch: PhoneTasks.SystemDispatch, intent: Intent, what: String): Boolean {
         ensureChannel(CHANNEL_OPEN, AppStrings.get(app, R.string.phone_open_channel), NotificationManager.IMPORTANCE_HIGH)
+        val available = nm.areNotificationsEnabled() &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+                nm.getNotificationChannel(CHANNEL_OPEN)?.importance != NotificationManager.IMPORTANCE_NONE)
+        val notification = builder(CHANNEL_OPEN)
+            .setContentTitle(AppStrings.get(app, R.string.phone_open_notice, what))
+            .setContentText(AppStrings.get(app, R.string.phone_tap_open)).setAutoCancel(true)
+        // A separate commitment: a stop during startActivity must not publish a new notice.
+        // Create the PendingIntent only after commitment; never cancel a potentially reused one.
+        if (!dispatch.commitNotice()) throw InterruptedException(PhoneTasks.STOPPED_MESSAGE)
+        if (!available) return false
         val id = ids.incrementAndGet()
         val pi = PendingIntent.getActivity(app, id, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        nm.notify(TAG, id, builder(CHANNEL_OPEN).setContentTitle(AppStrings.get(app, R.string.phone_open_notice, what)).setContentText(AppStrings.get(app, R.string.phone_tap_open)).setContentIntent(pi).setAutoCancel(true).build())
+        nm.notify(TAG, id, notification.setContentIntent(pi).build())
+        return true
     }
 
     override fun notify(title: String, text: String): SysResult {
@@ -321,6 +336,11 @@ class SystemActions(private val app: Context) : SystemApi {
             return SysResult(false, "DSH 没有通知权限，通知发不出去。请用户在系统设置里允许 DSH 发通知。")
         }
         ensureChannel(CHANNEL_NOTIFY, AppStrings.get(app, R.string.phone_reminder_channel), NotificationManager.IMPORTANCE_DEFAULT)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            nm.getNotificationChannel(CHANNEL_NOTIFY)?.importance == NotificationManager.IMPORTANCE_NONE) {
+            // l10n:keep agent tool result
+            return SysResult(false, "DSH 的「${AppStrings.get(app, R.string.phone_reminder_channel)}」通知渠道已关闭。请用户在系统设置中开启该渠道后再试。")
+        }
         val open = PendingIntent.getActivity(
             app, 0, Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
