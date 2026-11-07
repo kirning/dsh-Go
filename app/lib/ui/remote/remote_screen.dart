@@ -137,6 +137,7 @@ class RemoteScreen extends ConsumerWidget {
             SettingsTile(
               icon: AppIcons.add,
               tinted: false,
+              title: '添加直连主机',
               subtitle: direct.isEmpty ? '指定 IP 和端口，直接连那台电脑' : null,
               onTap: () => unawaited(_addDirect(context, ref)),
             ),
