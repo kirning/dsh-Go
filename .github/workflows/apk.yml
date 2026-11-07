@@ -1,6 +1,11 @@
 # Builds an installable arm64 APK for the fork without touching the upstream
 # release pipeline. Debug-signed (no key.properties here), and its own
 # applicationId, so it installs next to the upstream app.
+#
+# Version name is "<upstream>|<fork>", e.g. 1.0.13|0.2.0:
+#   * upstream part tracks app/pubspec.yaml (upstream release version);
+#   * fork part lives in tooling/fork_version.txt — minor bump for a feature,
+#     patch bump for a fix, untouched when only upstream moved.
 name: Fork APK
 
 on:
@@ -36,13 +41,24 @@ jobs:
       - name: Versions
         run: flutter --version
 
+      - name: Compose version name
+        id: ver
+        run: |
+          upstream=$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' app/pubspec.yaml)
+          fork=$(tr -d '[:space:]' < tooling/fork_version.txt)
+          test -n "$upstream" -a -n "$fork"
+          echo "name=$upstream|$fork" >> "$GITHUB_OUTPUT"
+          echo "building $upstream|$fork"
+
       - name: Get packages
         working-directory: app
         run: flutter pub get
 
       - name: Build APK
         working-directory: app
-        run: flutter build apk --release --flavor arm64 --target-platform android-arm64
+        run: >-
+          flutter build apk --release --flavor arm64 --target-platform android-arm64
+          --build-name "${{ steps.ver.outputs.name }}"
 
       - name: Collect
         run: |
