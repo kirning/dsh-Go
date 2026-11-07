@@ -47,6 +47,8 @@ final dshWebAccessProvider = Provider.autoDispose<DshWebAccess>((ref) {
       return const LocalDshWeb();
     case HostKind.relay:
       return NoDshWeb(appL10n.webRelayUnavailable);
+    case HostKind.direct:
+      return NoDshWeb('直连主机暂时不支持打开网页版');
     case HostKind.ssh:
       // Rebuild once the link connects (or reconnects to a new process).
       ref.watch(hostLinkStatusProvider(host));
