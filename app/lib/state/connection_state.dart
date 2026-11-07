@@ -5,6 +5,7 @@ import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/l10n.dart';
+import '../remote/direct/direct_link.dart';
 import '../remote/link_status.dart';
 import '../remote/network_watch.dart';
 import '../remote/relay/relay_backend.dart';
