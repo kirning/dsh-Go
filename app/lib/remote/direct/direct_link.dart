@@ -31,8 +31,9 @@ class DirectHostLink implements HostLink {
     Backoff? backoff,
     this.keepAliveInterval = const Duration(seconds: 20),
   }) : _connectClient = connector ?? _defaultConnector,
-       _backoff = backoff ?? Backoff(),
-       _kickSub = kicks?.listen((_) => kick());
+       _backoff = backoff ?? Backoff() {
+    _kickSub = kicks?.listen((_) => kick());
+  }
 
   /// The address this link was built for. Renames apply through [updateConfig];
   /// a new address or port rebuilds the link.
@@ -40,7 +41,7 @@ class DirectHostLink implements HostLink {
   final Future<String?> Function() loadToken;
   final DirectClientConnector _connectClient;
   final Backoff _backoff;
-  final StreamSubscription<void>? _kickSub;
+  StreamSubscription<void>? _kickSub;
 
   /// How often a live link checks that its socket is still up.
   final Duration keepAliveInterval;
