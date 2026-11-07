@@ -43,7 +43,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.github.ccch1mneyyy.dsh_app"
+        // Fork build: a separate package so it installs beside the upstream
+        // app instead of replacing it (and keeps its own data).
+        applicationId = "io.github.kirning.dsh_go.direct"
         // java.nio.file (symlinks while unpacking the rootfs) needs API 26.
         minSdk = 26
         // Target 28 like Termux, so the API 29+ exec restriction on app-private
