@@ -50,19 +50,35 @@ jobs:
           echo "name=$upstream+$fork" >> "$GITHUB_OUTPUT"
           echo "building $upstream+$fork"
 
-      - name: Gradle mirror
+      - name: Maven Central mirror
         # Central redirects some jars to github.com/JetBrains releases, which
-        # answers 504 from the runners often enough to break a build. Put a
-        # plain mirror first in every project's repository list so resolution
-        # never follows that redirect. Project scope only: touching the
-        # settings-level lists also replaces the plugin repositories.
+        # answers 504 from the runners often enough to break a build. Rewrite
+        # Central's URL to a plain mirror instead of adding a repository, so
+        # the list order (and the plugin repositories) stay exactly as they
+        # are; only the host changes.
         run: |
           mkdir -p ~/.gradle/init.d
           cat > ~/.gradle/init.d/mirror.gradle <<'EOF'
           def mirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+          def rewrite = { repos ->
+            try {
+              repos.all { repo ->
+                try {
+                  def url = repo.hasProperty('url') ? repo.url.toString() : ''
+                  if (url.contains('repo.maven.apache.org') || url.contains('repo1.maven.org')) {
+                    repo.url = mirror
+                  }
+                } catch (ignored) {}
+              }
+            } catch (ignored) {}
+          }
+          gradle.settingsEvaluated { settings ->
+            rewrite(settings.dependencyResolutionManagement.repositories)
+            rewrite(settings.pluginManagement.repositories)
+          }
           gradle.beforeProject { project ->
-            try { project.buildscript.repositories.maven { url = mirror } } catch (ignored) {}
-            try { project.repositories.maven { url = mirror } } catch (ignored) {}
+            rewrite(project.repositories)
+            rewrite(project.buildscript.repositories)
           }
           EOF
           cat ~/.gradle/init.d/mirror.gradle
