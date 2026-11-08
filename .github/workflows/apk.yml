@@ -2,7 +2,7 @@
 # release pipeline. Debug-signed (no key.properties here), and its own
 # applicationId, so it installs next to the upstream app.
 #
-# Version name is "<upstream>|<fork>", e.g. 1.0.13|0.2.0:
+# Version name is "<upstream>+<fork>", e.g. 1.0.13+0.2.0:
 #   * upstream part tracks app/pubspec.yaml (upstream release version);
 #   * fork part lives in tooling/fork_version.txt — minor bump for a feature,
 #     patch bump for a fix, untouched when only upstream moved.
@@ -47,8 +47,8 @@ jobs:
           upstream=$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' app/pubspec.yaml)
           fork=$(tr -d '[:space:]' < tooling/fork_version.txt)
           test -n "$upstream" -a -n "$fork"
-          echo "name=$upstream|$fork" >> "$GITHUB_OUTPUT"
-          echo "building $upstream|$fork"
+          echo "name=$upstream+$fork" >> "$GITHUB_OUTPUT"
+          echo "building $upstream+$fork"
 
       - name: Get packages
         working-directory: app
