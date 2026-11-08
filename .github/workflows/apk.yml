@@ -53,15 +53,13 @@ jobs:
       - name: Gradle mirror
         # Central redirects some jars to github.com/JetBrains releases, which
         # answers 504 from the runners often enough to break a build. Put a
-        # plain mirror first so resolution never follows that redirect.
+        # plain mirror first in every project's repository list so resolution
+        # never follows that redirect. Project scope only: touching the
+        # settings-level lists also replaces the plugin repositories.
         run: |
           mkdir -p ~/.gradle/init.d
           cat > ~/.gradle/init.d/mirror.gradle <<'EOF'
           def mirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
-          gradle.beforeSettings { settings ->
-            try { settings.pluginManagement.repositories.maven { url = mirror } } catch (ignored) {}
-            try { settings.dependencyResolutionManagement.repositories.maven { url = mirror } } catch (ignored) {}
-          }
           gradle.beforeProject { project ->
             try { project.buildscript.repositories.maven { url = mirror } } catch (ignored) {}
             try { project.repositories.maven { url = mirror } } catch (ignored) {}
