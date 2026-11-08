@@ -50,6 +50,25 @@ jobs:
           echo "name=$upstream+$fork" >> "$GITHUB_OUTPUT"
           echo "building $upstream+$fork"
 
+      - name: Gradle mirror
+        # Central redirects some jars to github.com/JetBrains releases, which
+        # answers 504 from the runners often enough to break a build. Put a
+        # plain mirror first so resolution never follows that redirect.
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/mirror.gradle <<'EOF'
+          def mirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+          gradle.beforeSettings { settings ->
+            try { settings.pluginManagement.repositories.maven { url = mirror } } catch (ignored) {}
+            try { settings.dependencyResolutionManagement.repositories.maven { url = mirror } } catch (ignored) {}
+          }
+          gradle.beforeProject { project ->
+            try { project.buildscript.repositories.maven { url = mirror } } catch (ignored) {}
+            try { project.repositories.maven { url = mirror } } catch (ignored) {}
+          }
+          EOF
+          cat ~/.gradle/init.d/mirror.gradle
+
       - name: Get packages
         working-directory: app
         run: flutter pub get
