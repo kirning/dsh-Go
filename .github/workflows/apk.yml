@@ -1,11 +1,9 @@
-# Builds an installable arm64 APK for the fork without touching the upstream
-# release pipeline. Debug-signed (no key.properties here), and its own
-# applicationId, so it installs next to the upstream app.
+# Builds an installable arm64 APK for the fork. Its own applicationId and a
+# pinned signing key, so it installs next to the upstream app and upgrades in
+# place; the APK also lands on a GitHub Release, which is what the phone
+# downloads (artifact zips are slow from here).
 #
-# Version name is "<upstream>|<fork>", e.g. 1.0.13|0.2.0:
-#   * upstream part tracks app/pubspec.yaml (upstream release version);
-#   * fork part lives in tooling/fork_version.txt — minor bump for a feature,
-#     patch bump for a fix, untouched when only upstream moved.
+# Version name is "<upstream>+<fork>", e.g. 1.3.0+0.2.0.
 name: Fork APK
 
 on:
@@ -14,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FLUTTER_VERSION: 3.47.7
@@ -47,8 +45,40 @@ jobs:
           upstream=$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' app/pubspec.yaml)
           fork=$(tr -d '[:space:]' < tooling/fork_version.txt)
           test -n "$upstream" -a -n "$fork"
-          echo "name=$upstream|$fork" >> "$GITHUB_OUTPUT"
-          echo "building $upstream|$fork"
+          echo "name=$upstream+$fork" >> "$GITHUB_OUTPUT"
+          echo "building $upstream+$fork"
+
+      - name: Maven Central mirror
+        # Central redirects some jars to github.com/JetBrains releases, which
+        # answers 504 from the runners often enough to break a build. Rewrite
+        # Central's URL to a plain mirror instead of adding a repository, so
+        # the list order (and the plugin repositories) stay as they are.
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/mirror.gradle <<'EOF'
+          def mirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+          def rewrite = { repos ->
+            try {
+              repos.all { repo ->
+                try {
+                  def url = repo.hasProperty('url') ? repo.url.toString() : ''
+                  if (url.contains('repo.maven.apache.org') || url.contains('repo1.maven.org')) {
+                    repo.url = mirror
+                  }
+                } catch (ignored) {}
+              }
+            } catch (ignored) {}
+          }
+          gradle.settingsEvaluated { settings ->
+            rewrite(settings.dependencyResolutionManagement.repositories)
+            rewrite(settings.pluginManagement.repositories)
+          }
+          gradle.beforeProject { project ->
+            rewrite(project.repositories)
+            rewrite(project.buildscript.repositories)
+          }
+          EOF
+          cat ~/.gradle/init.d/mirror.gradle
 
       - name: Get packages
         working-directory: app
@@ -63,7 +93,7 @@ jobs:
       - name: Collect
         run: |
           mkdir -p out
-          cp app/build/app/outputs/flutter-apk/*.apk out/ 2>/dev/null || true
+          cp app/build/app/outputs/flutter-apk/*.apk "out/dsh-go-${{ steps.ver.outputs.name }}.apk"
           ls -l out
 
       - uses: actions/upload-artifact@v4
@@ -72,3 +102,14 @@ jobs:
           path: out/*.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publish to a Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: fork-${{ steps.ver.outputs.name }}
+          name: dsh-go fork ${{ steps.ver.outputs.name }}
+          body: |
+            Upstream ${{ github.event.repository.name }} at app/pubspec.yaml's version,
+            plus the fork's direct-connect host mode (直连主机).
+          files: out/*.apk
+          make_latest: false
