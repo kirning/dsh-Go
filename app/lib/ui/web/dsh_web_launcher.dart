@@ -76,6 +76,8 @@ final dshWebAccessProvider = Provider.autoDispose<DshWebAccess>((ref) {
       // not running on the Host.
       if (isLiveTunnel(connection)) return NoDshWeb(appL10n.remoteWebHostNotReady);
       return NoDshWeb(appL10n.webConnectHostFirst(ref.watch(hostNameProvider(host)) ?? appL10n.commonRemoteHost));
+    case HostKind.direct:
+      return NoDshWeb('直连主机暂时不支持打开网页版');
     case HostKind.ssh:
       // Rebuild once the link connects (or reconnects to a new process).
       ref.watch(hostLinkStatusProvider(host));
