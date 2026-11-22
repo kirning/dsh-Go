@@ -1,0 +1,74 @@
+# Builds an installable arm64 APK for the fork without touching the upstream
+# release pipeline. Debug-signed (no key.properties here), and its own
+# applicationId, so it installs next to the upstream app.
+#
+# Version name is "<upstream>|<fork>", e.g. 1.0.13|0.2.0:
+#   * upstream part tracks app/pubspec.yaml (upstream release version);
+#   * fork part lives in tooling/fork_version.txt — minor bump for a feature,
+#     patch bump for a fix, untouched when only upstream moved.
+name: Fork APK
+
+on:
+  push:
+    branches: [direct-host, direct-host-v2]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.47.7
+  TZ: Asia/Shanghai
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Versions
+        run: flutter --version
+
+      - name: Compose version name
+        id: ver
+        run: |
+          upstream=$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' app/pubspec.yaml)
+          fork=$(tr -d '[:space:]' < tooling/fork_version.txt)
+          test -n "$upstream" -a -n "$fork"
+          echo "name=$upstream|$fork" >> "$GITHUB_OUTPUT"
+          echo "building $upstream|$fork"
+
+      - name: Get packages
+        working-directory: app
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: app
+        run: >-
+          flutter build apk --release --flavor arm64 --target-platform android-arm64
+          --build-name "${{ steps.ver.outputs.name }}"
+
+      - name: Collect
+        run: |
+          mkdir -p out
+          cp app/build/app/outputs/flutter-apk/*.apk out/ 2>/dev/null || true
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsh-go-direct-apk
+          path: out/*.apk
+          if-no-files-found: error
+          retention-days: 7
