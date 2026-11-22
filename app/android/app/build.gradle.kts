@@ -72,7 +72,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.github.ccch1mneyyy.dsh_app"
+        // Fork build: a separate package so it installs beside the upstream
+        // app instead of replacing it (and keeps its own data).
+        applicationId = "io.github.kirning.dsh_go.direct"
         if (sideBuild) applicationIdSuffix = sideSuffix
         manifestPlaceholders["appLabel"] = if (sideBuild) "DSH Go 测试" else "DSH Go"
         // java.nio.file (symlinks while unpacking the rootfs) needs API 26.
