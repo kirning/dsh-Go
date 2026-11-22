@@ -134,13 +134,13 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
 
   /// Same first-run shortcut as [_addSsh]: a host added while this phone has
   /// nothing to run on becomes the one in use.
-  Future<void> _addDirect(BuildContext context, WidgetRef ref) async {
+  Future<void> _addDirect() async {
     final saved = await Navigator.of(context).push<DirectHostConfig>(
       MaterialPageRoute(builder: (_) => const DirectHostFormPage()),
     );
-    if (saved == null || !context.mounted) return;
+    if (saved == null || !mounted) return;
     final nothingHere = ref.read(localRuntimeProvider).status.runtimeMissing;
-    if (nothingHere && ref.read(activeHostProvider).isLocal) await _use(context, ref, HostRef.direct(saved.id));
+    if (nothingHere && ref.read(activeHostProvider).isLocal) await _use(HostRef.direct(saved.id));
   }
 
   @override
@@ -170,18 +170,6 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
         _ActiveCard(active: active),
         if (signedIn) _RelayHostsSection(onUse: (h) => unawaited(_use(h)), onOffline: _useOffline),
         SettingsSection(
-          title: l10n.remoteTransferSettings,
-          children: [
-            SettingsSwitchTile(
-              key: const ValueKey('remote-compact-history'),
-              spot: Spots.remoteCompactHistory,
-              subtitle: l10n.remoteCompactHistoryHint,
-              value: ref.watch(remoteCompactHistoryProvider),
-              onChanged: (value) => unawaited(ref.read(remoteCompactHistoryProvider.notifier).set(value)),
-            ),
-          ],
-        ),
-        SettingsSection(
           title: '直连主机',
           footer: const Text('那台电脑已经在跑 dsh web：填地址和 token 直接连，不用 SSH，也不经过第三方服务器'),
           children: [
@@ -189,7 +177,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
               _DirectRow(
                 config: h,
                 active: active == HostRef.direct(h.id),
-                onTap: () => _use(context, ref, HostRef.direct(h.id)),
+                onTap: () => _use(HostRef.direct(h.id)),
                 onEdit: () => push(DirectHostFormPage(existing: h)),
               ),
             SettingsTile(
@@ -197,7 +185,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
               tinted: false,
               title: '添加直连主机',
               subtitle: direct.isEmpty ? '指定 IP 和端口，直接连那台电脑' : null,
-              onTap: () => unawaited(_addDirect(context, ref)),
+              onTap: () => unawaited(_addDirect()),
             ),
           ],
         ),
