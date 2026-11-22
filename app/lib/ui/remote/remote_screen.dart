@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../remote/direct/direct_host_config.dart';
 import '../../remote/relay/relay_backend.dart';
 import '../../runtime/local_footprint.dart';
 import '../../runtime/runtime_state.dart';
@@ -29,6 +30,7 @@ import 'network_details_sheet.dart';
 import 'pairing_page.dart';
 import 'relay_credit.dart';
 import 'relay_login_sheet.dart';
+import 'direct_host_form.dart';
 import 'ssh_host_form.dart';
 import 'session_backup_page.dart';
 
@@ -130,10 +132,22 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     if (nothingHere && ref.read(activeHostProvider).isLocal) await _use(HostRef.ssh(saved.id));
   }
 
+  /// Same first-run shortcut as [_addSsh]: a host added while this phone has
+  /// nothing to run on becomes the one in use.
+  Future<void> _addDirect(BuildContext context, WidgetRef ref) async {
+    final saved = await Navigator.of(context).push<DirectHostConfig>(
+      MaterialPageRoute(builder: (_) => const DirectHostFormPage()),
+    );
+    if (saved == null || !context.mounted) return;
+    final nothingHere = ref.read(localRuntimeProvider).status.runtimeMissing;
+    if (nothingHere && ref.read(activeHostProvider).isLocal) await _use(context, ref, HostRef.direct(saved.id));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
+    final direct = ref.watch(hostsProvider.select((s) => s.direct));
     final active = ref.watch(activeHostProvider);
     final (signedIn, refreshing) = ref.watch(
       relayAccountProvider.select((a) => (a.value?.signedIn ?? false, a.value?.refreshing ?? false)),
@@ -155,6 +169,38 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
         const _AccountCard(),
         _ActiveCard(active: active),
         if (signedIn) _RelayHostsSection(onUse: (h) => unawaited(_use(h)), onOffline: _useOffline),
+        SettingsSection(
+          title: l10n.remoteTransferSettings,
+          children: [
+            SettingsSwitchTile(
+              key: const ValueKey('remote-compact-history'),
+              spot: Spots.remoteCompactHistory,
+              subtitle: l10n.remoteCompactHistoryHint,
+              value: ref.watch(remoteCompactHistoryProvider),
+              onChanged: (value) => unawaited(ref.read(remoteCompactHistoryProvider.notifier).set(value)),
+            ),
+          ],
+        ),
+        SettingsSection(
+          title: '直连主机',
+          footer: const Text('那台电脑已经在跑 dsh web：填地址和 token 直接连，不用 SSH，也不经过第三方服务器'),
+          children: [
+            for (final h in direct)
+              _DirectRow(
+                config: h,
+                active: active == HostRef.direct(h.id),
+                onTap: () => _use(context, ref, HostRef.direct(h.id)),
+                onEdit: () => push(DirectHostFormPage(existing: h)),
+              ),
+            SettingsTile(
+              icon: AppIcons.add,
+              tinted: false,
+              title: '添加直连主机',
+              subtitle: direct.isEmpty ? '指定 IP 和端口，直接连那台电脑' : null,
+              onTap: () => unawaited(_addDirect(context, ref)),
+            ),
+          ],
+        ),
         SettingsSection(
           title: l10n.remoteSshHosts,
           footer: Text(l10n.remoteSshRequirements),
@@ -514,6 +560,40 @@ class _SshRow extends ConsumerWidget {
     );
   }
 }
+
+class _DirectRow extends ConsumerWidget {
+  const _DirectRow({required this.config, required this.active, required this.onTap, required this.onEdit});
+
+  final DirectHostConfig config;
+  final bool active;
+  final VoidCallback onTap;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final view = active ? watchHostStatus(ref, HostRef.direct(config.id)) : null;
+    return Semantics(
+      selected: active,
+      inMutuallyExclusiveGroup: true,
+      child: SettingsTile(
+        icon: hostKindIcon(HostKind.direct),
+        tinted: false,
+        title: config.name,
+        subtitle: config.authority,
+        onTap: onTap,
+        value: view == null ? null : _HostState(view),
+        trailing: _EdgeIconButton(
+          icon: const Icon(AppIcons.configure, size: 20),
+          tooltip: l10n.commonEdit,
+          onPressed: onEdit,
+        ),
+      ),
+    );
+  }
+}
+
+// ── DSH Remote account ───────────────────────────────────────────────────────
 
 // ── DSH Remote hosts ─────────────────────────────────────────────────────────
 
